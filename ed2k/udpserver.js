@@ -24,7 +24,7 @@ var receive = {
                 if (sources.length > 0) { send.globFoundSources(fileHash, sources, info); }
             });
         }
-        if (buffer.pos() != buffer.length) {
+        if (buffer.pos() < buffer.length) {
             log.warn('globGetSources: Excess data: 0x'.buffer.get().toString('hex'));
         }
     },
@@ -40,7 +40,7 @@ var receive = {
                 if (sources.length > 0) { send.globFoundSources(fileHash, sources, info); }
             });
         }
-        if (buffer.pos() != buffer.length) {
+        if (buffer.pos() < buffer.length) {
             log.warn('globGetSources2: Excess data: 0x'.buffer.get().toString('hex'));
         }
     },

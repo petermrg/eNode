@@ -44,7 +44,7 @@ Buffer.prototype.getUInt32LE = function() {
 
 Buffer.prototype.getUInt64LE = function() {
     var lo = this.readUInt32LE(this._pointer);
-    var hi = this.readUInt32LE(this._pointer);
+    var hi = this.readUInt32LE(this._pointer+4);
     this._pointer+= 8;
     return lo + (hi * 0x100000000);
 };

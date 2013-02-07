@@ -11,7 +11,7 @@ var sql = {
 
     def: function(err, sender) { // default error handler
         sender = sender ? (sender+': ') : '';
-        log.trace(JSON.stringify(error));
+        log.trace(JSON.stringify(err));
         if (!err) { return; }
         if (err.fatal) {
             log.panic(sender+'MySQL '+err);
