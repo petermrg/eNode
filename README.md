@@ -26,7 +26,7 @@ Contributions are welcome.
 
 ##Usage:
 
-1. Create mysql database tables. Iimport shema in `misc/enode.sql`
+1. Create MySql database tables. Import shema in `misc/enode.sql`
 2. Modify config file: `enode.config.js`
 3. Execute: `node enode.js` -or- `chmod +x enode.js` and then `./node.js`
 4. You can modify the verbose level modifing the options of the `tinylogger` module
