@@ -154,21 +154,26 @@ var udpErr = function(err) {
 }
 
 var processData = function(buffer, info) {
-    var protocol = buffer.getUInt8();
-    var code = buffer.getUInt8();
-    switch (protocol) {
-        case PR_ED2K:
-            switch (code) {
-                case OP_GLOBGETSOURCES: receive.globGetSources(buffer, info); break;
-                case OP_GLOBGETSOURCES2: receive.globGetSources2(buffer, info); break;
-                case OP_GLOBSERVSTATREQ: receive.globServStatReq(buffer, info); break;
-                case OP_SERVERDESCREQ: receive.servDescReq(buffer, info); break;
-                default: log.warn('UDP processData: unknown operation code: 0x'+code.toString(16));
-            }
-            break;
-        default:
-            log.warn('UDP: Unsupported protocol 0x'+protocol.toString(16))
-            log.text(hexDump(msg));
+    try {
+        var protocol = buffer.getUInt8();
+        var code = buffer.getUInt8();
+        switch (protocol) {
+            case PR_ED2K:
+                switch (code) {
+                    case OP_GLOBGETSOURCES: receive.globGetSources(buffer, info); break;
+                    case OP_GLOBGETSOURCES2: receive.globGetSources2(buffer, info); break;
+                    case OP_GLOBSERVSTATREQ: receive.globServStatReq(buffer, info); break;
+                    case OP_SERVERDESCREQ: receive.servDescReq(buffer, info); break;
+                    default: log.warn('UDP processData: unknown operation code: 0x'+code.toString(16));
+                }
+                break;
+            default:
+                log.warn('UDP: Unsupported protocol 0x'+protocol.toString(16))
+                log.text(hexDump(msg));
+        }
+    } catch(err) {
+        log.error(JSON.stringify(Err));
+        console.trace();
     }
 }
 

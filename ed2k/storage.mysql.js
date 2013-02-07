@@ -34,7 +34,7 @@ var sql = {
             callback(err, rows);
         });
         if (conf.log) {
-            log.sql('['+sql.current+'] '+(conf.fullLog ? q.sql : q.sql.substring(0,150)));
+            log.sql('['+sql.current+'] '+(conf.fullLog ? q.sql : q.sql.substring(0,80)));
         }
         sql.current = (sql.current+1) % sql.connectionsCount; // round robin
     },

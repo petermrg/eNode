@@ -93,6 +93,6 @@ global.ENODE_VERSIONSTR         = 'v0.01a';
 global.ENODE_VERSIONINT         = 0x00000001;
 global.ENODE_NAME               = 'eNode';
 
-console.log('+---------------+');
+console.log('+--------------+');
 console.log('| '+ENODE_NAME+' '+ENODE_VERSIONSTR+' |');
-console.log('+---------------+');
+console.log('+--------------+');

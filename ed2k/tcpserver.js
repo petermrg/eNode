@@ -207,34 +207,29 @@ var receive = {
     parse: function(client) {
         //log.trace('TCP receive.parse');
         //log.trace(client.info);
-        try {
-            switch (client.packet.protocol) {
-                case PR_ED2K:
-                    receive.ed2k(client);
-                    break;
-                case PR_ZLIB:
-                    zlib.unzip(client.packet.data, function(err, buffer) {
-                        if (!err) {
-                            //log.ok('unzip'); // unzip ok
-                            client.packet.data = buffer;
-                            receive.ed2k(client);
-                        }
-                        else {
-                            log.error('Cannot unzip: operation 0x'+client.packet.code.tostring(16));
-                        }
-                    });
-                    break;
-                case PR_EMULE:
-                    log.warn('TCP: Unsupported protocol: PR_EMULE (0x'+
-                        client.packet.protocol.toString(16)+')');
-                    break;
-                default:
-                    log.warn('TCP: Unknown protocol: 0x'+client.packet.protocol.toString(16));
-                    log.text(hexDump(client.packet.data));
-            }
-        } catch(err) {
-            log.error('TCP receive.parse: '+err);
-            console.trace();
+        switch (client.packet.protocol) {
+            case PR_ED2K:
+                receive.ed2k(client);
+                break;
+            case PR_ZLIB:
+                zlib.unzip(client.packet.data, function(err, buffer) {
+                    if (!err) {
+                        //log.ok('unzip'); // unzip ok
+                        client.packet.data = buffer;
+                        receive.ed2k(client);
+                    }
+                    else {
+                        log.error('Cannot unzip: operation 0x'+client.packet.code.tostring(16));
+                    }
+                });
+                break;
+            case PR_EMULE:
+                log.warn('TCP: Unsupported protocol: PR_EMULE (0x'+
+                    client.packet.protocol.toString(16)+')');
+                break;
+            default:
+                log.warn('TCP: Unknown protocol: 0x'+client.packet.protocol.toString(16));
+                log.text(hexDump(client.packet.data));
         }
         client.packet.status = PS_NEW;
         return true;
@@ -368,16 +363,21 @@ var send = {
 
 var processPacket = function(buffer, client) {
     //log.trace('processPacket. packet.status: '+client.packet.status);
-    switch (client.packet.status) {
-        case PS_NEW: client.packet.init(buffer); break;
-        case PS_WAITING_DATA: client.packet.append(buffer); break;
-        default: log.error('processPacket: Bad packet status: 0x'+client.packet.status);
-    }
-    if (client.packet.status == PS_READY) {
-        receive.parse(client);
-        if (client.packet.hasExcess) {
-            processPacket(client.packet.excess, client);
+    try {
+        switch (client.packet.status) {
+            case PS_NEW: client.packet.init(buffer); break;
+            case PS_WAITING_DATA: client.packet.append(buffer); break;
+            default: log.error('processPacket: Bad packet status: 0x'+client.packet.status);
         }
+        if (client.packet.status == PS_READY) {
+            receive.parse(client);
+            if (client.packet.hasExcess) {
+                processPacket(client.packet.excess, client);
+            }
+        }
+    } catch(err) {
+        log.error(JSON.stringify(err));
+        console.trace();
     }
 };
 
