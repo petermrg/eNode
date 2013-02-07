@@ -1,4 +1,4 @@
-var UDP = require('dgram');
+var dgram = require('dgram');
 var db  = require('./storage.js');
 var hexDump = require('hexy').hexy;
 var misc = require('./misc.js');
@@ -8,7 +8,7 @@ var lowIdClients = require('./tcpserver.js').lowIdClients;
 var conf = require('../enode.config.js').config;
 require('./buffer.js');
 
-var udpServer = UDP.createSocket('udp4');
+var udpServer = dgram.createSocket('udp4');
 
 var receive = {
 
@@ -61,11 +61,43 @@ var receive = {
             var challenge = buffer.getUInt32LE();
             send.servDescRes(challenge, info);
         }
-    }
+    },
+
+    globSearchReq3: function(buffer, info) {
+        log.info('GLOBSEARCHREQ3 < '+info.address+':'+info.port);
+        //console.log(hexDump(buffer));
+        buffer.getTags(function(tag){
+            if (tag[0] == 'searchtree') {
+                //not sure about what to do here
+                //console.log('got a search tree: 0x'+tag[1].toString(16));
+            }
+        });
+        //var tree = buffer.get();
+        //console.log(hexDump(tree));
+        db.files.find(buffer, function(files) {
+            // do not send results if there aren't
+            if (files.length > 0) { send.globSearchRes(files, info); }
+        });
+    },
+
 
 }
 
 var send = {
+
+    globSearchRes: function(files, info){
+        log.debug('GLOBSEARCHRES > '+info.address);
+        var pack = [[TYPE_UINT8, OP_GLOBSEARCHRES]];
+        files.forEach(function(file){
+            Packet.addFile(pack, file);
+        });
+        console.dir(pack);
+        var buffer = Packet.make(PR_ED2K, pack);
+        udpServer.send(buffer, 0, buffer.length, info.port, info.address, function(err){
+            if (err) { log.error(err); }
+            else log.ok('udp msg sended')
+        });
+    },
 
     globFoundSources: function(fileHash, sources, info) {
         log.info('GLOBFOUNDSOURCES < '+info.address+':'+info.port);
@@ -88,25 +120,26 @@ var send = {
 
     globServStatRes: function(challenge, info) {
         log.info('GLOBSERVSTATRES > '+info.address+':'+info.port);
-        var flags = (conf.udp.getSources ? FLAG_UDP_GETSOURCES : 0) +
-            (conf.udp.getFiles ? FLAG_UDP_GETFILES : 0) +
+        var flags =
+            (conf.udp.getSources ? FLAG_UDP_EXTGETSOURCES : 0) +
+            (conf.udp.getFiles ? FLAG_UDP_EXTGETFILES : 0) +
             FLAG_NEWTAGS +
             FLAG_UNICODE +
-            FLAG_UDP_GLOBGETSOURCES2 +
+            FLAG_UDP_EXTGETSOURCES2 +
             FLAG_LARGEFILES;
             //FLAG_UDP_UDPOBFUSCATION +
             //FLAG_UDP_TCPOBFUSCATION;
-
+        log.trace('UDP flags: 0x'+flags.toString(16)+' - '+flags.toString(2));
         var pack = [
             [TYPE_UINT8, OP_GLOBSERVSTATRES],
             [TYPE_UINT32, challenge],
-            [TYPE_UINT32, db.clients.count()+2000],
+            [TYPE_UINT32, db.clients.count()+2000], // fake value, for testing
             [TYPE_UINT32, db.files.count()],
             [TYPE_UINT32, conf.tcp.maxConnections],
             [TYPE_UINT32, 10000], // server soft file limit ??
             [TYPE_UINT32, 20000], // server hard file limit ??
             [TYPE_UINT32, flags],
-            [TYPE_UINT32, lowIdClients.count()+1000],
+            [TYPE_UINT32, lowIdClients.count()+1000], // fake value, for testing
             //udpserverkey
             //obfuscation tcp port
             //obfuscation udp port
@@ -154,7 +187,7 @@ var udpErr = function(err) {
 }
 
 var processData = function(buffer, info) {
-    try {
+    //try {
         var protocol = buffer.getUInt8();
         var code = buffer.getUInt8();
         switch (protocol) {
@@ -164,6 +197,7 @@ var processData = function(buffer, info) {
                     case OP_GLOBGETSOURCES2: receive.globGetSources2(buffer, info); break;
                     case OP_GLOBSERVSTATREQ: receive.globServStatReq(buffer, info); break;
                     case OP_SERVERDESCREQ: receive.servDescReq(buffer, info); break;
+                    case OP_GLOBSEARCHREQ3: receive.globSearchReq3(buffer, info); break;
                     default: log.warn('UDP processData: unknown operation code: 0x'+code.toString(16));
                 }
                 break;
@@ -171,10 +205,10 @@ var processData = function(buffer, info) {
                 log.warn('UDP: Unsupported protocol 0x'+protocol.toString(16))
                 log.text(hexDump(msg));
         }
-    } catch(err) {
-        log.error(JSON.stringify(Err));
-        console.trace();
-    }
+    // } catch(err) {
+    //     log.error(JSON.stringify(err));
+    //     console.trace();
+    // }
 }
 
 exports.run = function() {

@@ -1,4 +1,4 @@
-#eNode - A node.js Emule/Ed2k Server
+#eNode - A node.js eD2K/eMule Server
 
 This is a *experimental-buggy-testing-pre-alpha* release. **Not ready to use!**
 

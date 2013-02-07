@@ -138,33 +138,7 @@ var receive = {
         log.info('SEARCHREQUEST < '+client.remoteAddress);
         //log.text(hexDump(client.packet.data));
         db.files.find(client.packet.data, function(files){
-            var pack = [
-                [TYPE_UINT8, OP_SEARCHRESULT],
-                [TYPE_UINT32, files.length]
-            ];
-            files.forEach(function(f){
-                //console.dir(f);
-                var tags = [
-                    [TYPE_STRING, TAG_NAME, f.name],
-                    [TYPE_UINT32, TAG_SIZE, f.size % 0x100000000],
-                    [TYPE_STRING, TAG_TYPE, f.type],
-                    [TYPE_UINT32, TAG_SOURCES, f.sources],
-                    [TYPE_UINT32, TAG_COMPLETE_SOURCES, f.completed],
-                ];
-                if (f.size >= 0x100000000) tags.push(
-                    [TYPE_UINT32, TAG_SIZE_HI, Math.floor(f.size/0x100000000)]);
-                if (f.title != '') tags.push([TYPE_STRING, TAG_MEDIA_TITLE, f.title]);
-                if (f.artist != '') tags.push([TYPE_STRING, TAG_MEDIA_ARTIST, f.artist]);
-                if (f.album != '') tags.push([TYPE_STRING, TAG_MEDIA_ALBUM, f.album]);
-                if (f.runtime > 0) tags.push([TYPE_UINT32, TAG_MEDIA_LENGTH, f.runtime]);
-                if (f.bitrate > 0) tags.push([TYPE_UINT32, TAG_MEDIA_BITRATE, f.bitrate]);
-                if (f.codec != '') tags.push([TYPE_STRING, TAG_MEDIA_CODEC, f.codec]);
-                pack.push([TYPE_HASH, f.hash]);
-                pack.push([TYPE_UINT32, f.source_id]);
-                pack.push([TYPE_UINT16, f.source_port]);
-                pack.push([TYPE_TAGS, tags]);
-            });
-            client.write(Packet.make(PR_ED2K, pack), errTCP);
+            send.searchResult(files, client);
         });
     },
 
@@ -238,6 +212,19 @@ var receive = {
 };
 
 var send = {
+
+    searchResult: function(files, client) {
+        log.debug('SEARCHRESULT > '+client.remoteAddress);
+        var pack = [
+            [TYPE_UINT8, OP_SEARCHRESULT],
+            [TYPE_UINT32, files.length]
+        ];
+        files.forEach(function(file){
+            //console.dir(f);
+            Packet.addFile(pack, file)
+        });
+        client.write(Packet.make(PR_ED2K, pack), errTCP);
+    },
 
     serverList: function(client) {
         log.debug('SERVERLIST > '+client.remoteAddress);

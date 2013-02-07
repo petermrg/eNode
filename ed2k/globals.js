@@ -26,9 +26,9 @@ global.OP_GLOBFOUNDSOURCES = 0x9b;
 global.OP_GLOBSERVSTATREQ  = 0x96;
 global.OP_GLOBSERVSTATRES  = 0x97;
 global.OP_GLOBSEARCHREQ    = 0x98; //!!
-global.OP_GLOBSEARCHREQ2   = 0x92; //!!
-global.OP_GLOBSEARCHREQ3   = 0x90; //!!
-global.OP_GLOBSEARCHRES    = 0x99; //!!
+global.OP_GLOBSEARCHREQ2   = 0x92; //!! same as 3??
+global.OP_GLOBSEARCHREQ3   = 0x90;
+global.OP_GLOBSEARCHRES    = 0x99;
 global.OP_SERVERDESCREQ    = 0xa2;
 global.OP_SERVERDESCRES    = 0xa3;
 
@@ -67,6 +67,7 @@ global.TAG_MEDIA_TITLE     = 0xd2;
 global.TAG_MEDIA_LENGTH    = 0xd3;
 global.TAG_MEDIA_BITRATE   = 0xd4;
 global.TAG_MEDIA_CODEC     = 0xd5;
+global.TAG_SEARCHTREE      = 0x0e;
 
 global.FL_PARTIAL_ID       = 0xfcfcfcfc;
 global.FL_PARTIAL_PORT     = 0xfcfc;
@@ -83,10 +84,10 @@ global.FLAG_SUPPORTCRYPT   = 0x0200;
 global.FLAG_REQUESTCRYPT   = 0x0400;
 global.FLAG_REQUIRECRYPT   = 0x0800;
 
-global.FLAG_UDP_GETSOURCES      = 0x0001;
-global.FLAG_UDP_GETFILES        = 0x0002;
-global.FLAG_UDP_GLOBGETSOURCES2 = 0x0020;
-global.FLAG_UDP_OBFUSCATION     = 0x0200;
+global.FLAG_UDP_EXTGETSOURCES  = 0x0001;
+global.FLAG_UDP_EXTGETFILES    = 0x0002;
+global.FLAG_UDP_EXTGETSOURCES2 = 0x0020;
+global.FLAG_UDP_OBFUSCATION    = 0x0200;
 global.FLAG_TCP_OBFUSCATION    = 0x0400;
 
 global.ENODE_VERSIONSTR         = 'v0.01a';

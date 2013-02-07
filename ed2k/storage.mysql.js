@@ -298,15 +298,15 @@ var searchExpr = function(token, type, value) {
         case 0x00: return " AND ";
         case 0x01: return " OR ";
         case 0x02: return " AND NOT ";
-        case 0x030001: return "s.type="+esc(value);
-        case 0x040001: return "s.ext="+esc(value);
-        case 0xd50001: return "s.codec="+esc(value);
-        case 0x02000101: return "f.size>"+esc(value);
-        case 0x02000102: return "f.size<"+esc(value);
-        case 0x15000101: return "f.sources>"+esc(value);
-        case 0xd4000101: return "s.bitrate>"+esc(value);
-        case 0xd3000101: return "s.duration>"+esc(value);
-        case 0x30000101: return "f.completed>"+esc(value);
+        case 0x030001: return "s.type="+sql.esc(value);
+        case 0x040001: return "s.ext="+sql.esc(value);
+        case 0xd50001: return "s.codec="+sql.esc(value);
+        case 0x02000101: return "f.size>"+sql.esc(value);
+        case 0x02000102: return "f.size<"+sql.esc(value);
+        case 0x15000101: return "f.sources>"+sql.esc(value);
+        case 0xd4000101: return "s.bitrate>"+sql.esc(value);
+        case 0xd3000101: return "s.duration>"+sql.esc(value);
+        case 0x30000101: return "f.completed>"+sql.esc(value);
         default: log.warn('searchExpr: unknown type: 0x'+type.toString(16)+'; token: 0x'+token.toString(16)+'; value: '+value);
     }
 }

@@ -1,3 +1,4 @@
+var log = require('tinylogger');
 
 Buffer.prototype._pointer = 0;
 
@@ -222,16 +223,17 @@ Buffer.prototype.getTag = function() {
         case TAG_MEDIA_LENGTH: tag = ['length', this.getTagValue(type)]; break;
         case TAG_MEDIA_BITRATE: tag = ['bitrate', this.getTagValue(type)]; break;
         case TAG_MEDIA_CODEC: tag = ['codec', this.getTagValue(type)]; break;
+        case TAG_SEARCHTREE: tag = ['searchtree', this.getTagValue(type)]; break;
         default:
             tag = ['unknown', this.getTagValue(type)];
-            log.warn('Unknown tag code: 0x'+code.toString(16)+' Value: '+misc.json(tag));
+            log.warn('Unknown tag code: 0x'+code.toString(16)+' Value: '+JSON.stringify(tag));
     }
     return tag;
 };
 
 Buffer.prototype.getTags = function(callback) {
     var count = this.getUInt32LE();
-    //log.trace(count.toString() + ' tags');
+    log.trace('Got '+count+' tags');
     //var tags = [];
     while (count--) {
         var tag = this.getTag();
