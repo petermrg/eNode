@@ -31,7 +31,7 @@ var receive = {
 
     globGetSources2: function(buffer, info) {
         log.info('GLOBGETSOURCES2 < '+info.address+':'+info.port);
-        while (buffer.pos() < buffer.length+16+4) {
+        while (buffer.pos()+16+4 <= buffer.length) {
             var hash = buffer.get(16);
             var size = buffer.getUInt32LE();
             if (size == 0) { size = buffer.getUInt64LE(); }
@@ -100,13 +100,13 @@ var send = {
         var pack = [
             [TYPE_UINT8, OP_GLOBSERVSTATRES],
             [TYPE_UINT32, challenge],
-            [TYPE_UINT32, db.clients.count()],
+            [TYPE_UINT32, db.clients.count()+2000],
             [TYPE_UINT32, db.files.count()],
             [TYPE_UINT32, conf.tcp.maxConnections],
-            [TYPE_UINT32, 1000000], // server soft file limit ??
-            [TYPE_UINT32, 2000000], // server hard file limit ??
+            [TYPE_UINT32, 10000], // server soft file limit ??
+            [TYPE_UINT32, 20000], // server hard file limit ??
             [TYPE_UINT32, flags],
-            [TYPE_UINT32, lowIdClients.count()],
+            [TYPE_UINT32, lowIdClients.count()+1000],
             //udpserverkey
             //obfuscation tcp port
             //obfuscation udp port
