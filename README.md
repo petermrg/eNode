@@ -19,10 +19,10 @@ Contributions are welcome.
 * Node.js v0.8+
 * MySQL server
 * Node.js modules:
-  * mysql
-  * hexy: to do hexdumps, useful for debugging packets
-  * tinylogger: to show messages in console
-    * colors: used in tinylogger
+  * [mysql](https://github.com/felixge/node-mysql)
+  * [hexy](https://github.com/a2800276/hexy.js): to do hexdumps, useful for debugging packets
+  * [tinylogger](https://github.com/petermrg/tinylogger): to show messages in console
+    * [colors](https://github.com/Marak/colors.js): used in tinylogger
 
 ##Usage:
 
