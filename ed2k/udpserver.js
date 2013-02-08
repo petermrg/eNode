@@ -90,9 +90,7 @@ var send = {
             var pack = [[TYPE_UINT8, OP_GLOBSEARCHRES]];
             Packet.addFile(pack, file);
             var buffer = Packet.makeUDP(PR_ED2K, pack);
-            udpServer.send(buffer, 0, buffer.length, info.port, info.address, function(err){
-                if (err) { log.error(err); }
-            });
+            udpServer.send(buffer, 0, buffer.length, info.port, info.address, udpErr);
         });
     },
 
@@ -109,10 +107,7 @@ var send = {
         });
         //console.dir(pack);
         var buffer = Packet.makeUDP(PR_ED2K, pack);
-        udpServer.send(buffer, 0, buffer.length, info.port, info.address, function(err){
-            if (err) { log.error(err); }
-            else log.ok('udp msg sended')
-        });
+        udpServer.send(buffer, 0, buffer.length, info.port, info.address, udpErr);
     },
 
     globServStatRes: function(challenge, info) {

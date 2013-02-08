@@ -9,7 +9,7 @@ var sql = {
     current: 0,
     connectionsCount: 0,
 
-    def: function(err, sender) { // default error handler
+    defErr: function(err, sender) { // default error handler
         sender = sender ? (sender+': ') : '';
         if (!err) { return; }
         log.error(JSON.stringify(err));
@@ -24,7 +24,7 @@ var sql = {
     esc: function(value) { return sql.connections[sql.current].escape(value); },
 
     query: function(str, values, callback) {
-        if (callback == undefined) { callback = sql.def; }
+        if (callback == undefined) { callback = sql.defErr; }
         var q = sql.connections[sql.current].query(str, values, function(err, rows) {
             if (err && err.code == 'ER_LOCK_DEADLOCK') {
                 log.warn('Deadlock detected. Query: '+str);
@@ -49,7 +49,7 @@ var sql = {
                 sqlConnection.connect();
             }
             else {
-                sql.def(err, 'ErrorListener');
+                sql.defErr(err, 'ErrorListener');
             }
         });
     },
@@ -67,13 +67,13 @@ exports.init = function(callback) {
         });
         sql.connections[i].connect(function(err){
             sql.connectionsCount++;
-            if (err) { return sql.def(err); }
+            if (err) { return sql.defErr(err); }
             if (sql.connectionsCount == conf.connections) { // last connection?
                 log.ok('Connected to MySQL server ('+conf.connections+' connections): '+conf.user+'@'+conf.host+'/'+conf.database);
                 sql.query('UPDATE clients SET online = 0', function(err){
-                    if (err) { return sql.def(err); }
+                    if (err) { return sql.defErr(err); }
                     sql.query('UPDATE sources SET online = 0', function(err){
-                        if (err) { return sql.def(err); }
+                        if (err) { return sql.defErr(err); }
                         files.updateCount();
                         callback();
                     });
@@ -116,7 +116,7 @@ clients = {
                 }
             });
         } catch (err) {
-            sql.def(err);
+            sql.defErr(err);
             callback(false);
         }
     },
@@ -132,7 +132,7 @@ clients = {
 
     getById: function(clientId, callback) {
         sql.query('SELECT * FROM clients WHERE id_ed2k = ? LIMIT 1', [clientId], function(err, client){
-            if (err) { return sql.def(err) }
+            if (err) { return sql.defErr(err) }
             callback(client);
         });
     },
@@ -145,7 +145,7 @@ var files = {
 
     get: function(fileHash, fileSize, callback) {
         sql.query('SELECT id FROM files WHERE hash = ? AND size = ? LIMIT 1', [fileHash, fileSize], function(err, files){
-            if (err) { return sql.def(err) }
+            if (err) { return sql.defErr(err) }
             if (files.length > 0) { callback(files[0].id); }
             else { callback(false); }
         });
@@ -153,7 +153,7 @@ var files = {
 
     getByHash: function(fileHash, callback) {
         sql.query('SELECT id FROM files WHERE hash = ? LIMIT 1', [fileHash], function(err, files){
-            if (err) { return sql.def(err) }
+            if (err) { return sql.defErr(err) }
             if (files.length > 0) { callback(files[0].id); }
             else { callback(false); }
         });
@@ -162,7 +162,7 @@ var files = {
     add: function(file, clientInfo) {
         sql.current = clientInfo.id % sql.connectionsCount;
         sql.query('INSERT INTO files SET time_offer=NOW(), ? ON DUPLICATE KEY UPDATE time_offer=NOW()', {hash: file.hash, size: file.size}, function(err){
-            if (err) { return sql.def(err); }
+            if (err) { return sql.defErr(err); }
             sql.current = clientInfo.id % sql.connectionsCount;
             files.get(file.hash, file.size, function(fileId) {
                 if (fileId == false) {
@@ -191,12 +191,12 @@ var files = {
         if (file.length) v.length = file.length;
         sql.current = clientInfo.id % sql.connectionsCount;
         sql.query('INSERT INTO sources SET ?, time_offer = NOW() ON DUPLICATE KEY UPDATE ?, time_offer = NOW()', [v,v], function(err){
-            if (err) { return sql.def(err, 'files.addSource (insert)'); }
+            if (err) { return sql.defErr(err, 'files.addSource (insert)'); }
             sql.current = clientInfo.id % sql.connectionsCount;
             sql.query('UPDATE files AS f '+
                 'LEFT JOIN (SELECT id_file, SUM(complete) AS c, COUNT(*) AS s FROM sources GROUP BY id_file) AS c ON f.id = c.id_file '+
                 'SET f.completed = c.c, f.sources = c.s, source_id = ?, source_port = ?', [clientInfo.id, clientInfo.port], function(err){
-                if (err) { return sql.def(err, 'files.addSource (update)'); }
+                if (err) { return sql.defErr(err, 'files.addSource (update)'); }
             });
         });
     },
@@ -211,7 +211,7 @@ var files = {
                     'ORDER BY s.online DESC, s.time_offer DESC '+
                     'LIMIT 255';
                 sql.query(q, [fileId], function(err, sources){
-                    if (err) { return sql.def(err); }
+                    if (err) { return sql.defErr(err); }
                     callback(fileHash, sources);
                 });
             }
@@ -229,7 +229,7 @@ var files = {
                     'ORDER BY s.online DESC, s.time_offer DESC '+
                     'LIMIT 255';
                 sql.query(q, [fileId], function(err, sources){
-                    if (err) { return sql.def(err); }
+                    if (err) { return sql.defErr(err); }
                     callback(fileHash, sources);
                 });
             }
@@ -264,7 +264,7 @@ var files = {
                 callback(sources);
             });
         } catch (err) {
-            sql.def(err, 'files.find');
+            sql.defErr(err, 'files.find');
             callback([]);
         }
     },

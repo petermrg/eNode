@@ -115,6 +115,7 @@ Packet.prototype.init = function(buffer) {
         }
     } catch (err) {
         this.status = PS_NEW;
+        log.error('Packet.init:');
         log.error(JSON.stringify(err));
         //log.text(hexDump(buffer.slice(0,32)));
     }

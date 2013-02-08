@@ -233,7 +233,7 @@ Buffer.prototype.getTag = function() {
 
 Buffer.prototype.getTags = function(callback) {
     var count = this.getUInt32LE();
-    log.trace('Got '+count+' tags');
+    //log.trace('Got '+count+' tags');
     //var tags = [];
     while (count--) {
         var tag = this.getTag();
