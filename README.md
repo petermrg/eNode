@@ -26,12 +26,19 @@ Contributions are welcome.
 
 ##Usage:
 
-1. Create MySql database tables. Import shema in `misc/enode.sql`
+1. Create MySQL database tables. Database structure: `misc/enode.sql`
 2. Modify config file: `enode.config.js`
 3. Execute: `node enode.js` -or- `chmod +x enode.js` and then `./enode.js`
 4. You can modify the verbose level modifing the options of the `tinylogger` module
 
 If you want to test the server on a local network, change emule options to allow local connections.
+
+##To do:
+
+* TCP/UPD protocol obfuscation
+* IPv6 support: [unnoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
+* Better storage and indexing. Perhaps with [Sphinx](http://sphinxsearch.com/)
+* Support for [Nat Traversal](http://en.wikipedia.org/wiki/NAT_traversal)
 
 ##Thanks to:
 
