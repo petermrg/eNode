@@ -72,11 +72,10 @@ var receive = {
                 //console.log('got a search tree: 0x'+tag[1].toString(16));
             }
         });
-        //var tree = buffer.get();
-        //console.log(hexDump(tree));
         db.files.find(buffer, function(files) {
-            // do not send results if there aren't
-            if (files.length > 0) { send.globSearchRes(files, info); }
+            if (files.length > 0) {
+                send.globSearchRes(files, info);
+            }
         });
     },
 
@@ -86,16 +85,14 @@ var receive = {
 var send = {
 
     globSearchRes: function(files, info){
-        log.debug('GLOBSEARCHRES > '+info.address);
-        var pack = [[TYPE_UINT8, OP_GLOBSEARCHRES]];
+        log.info('GLOBSEARCHRES > '+info.address+' ('+files.length+' files)');
         files.forEach(function(file){
+            var pack = [[TYPE_UINT8, OP_GLOBSEARCHRES]];
             Packet.addFile(pack, file);
-        });
-        console.dir(pack);
-        var buffer = Packet.make(PR_ED2K, pack);
-        udpServer.send(buffer, 0, buffer.length, info.port, info.address, function(err){
-            if (err) { log.error(err); }
-            else log.ok('udp msg sended')
+            var buffer = Packet.makeUDP(PR_ED2K, pack);
+            udpServer.send(buffer, 0, buffer.length, info.port, info.address, function(err){
+                if (err) { log.error(err); }
+            });
         });
     },
 
@@ -110,7 +107,7 @@ var send = {
             pack.push([TYPE_UINT32, src.id]);
             pack.push([TYPE_UINT16, src.port]);
         });
-        console.dir(pack);
+        //console.dir(pack);
         var buffer = Packet.makeUDP(PR_ED2K, pack);
         udpServer.send(buffer, 0, buffer.length, info.port, info.address, function(err){
             if (err) { log.error(err); }
