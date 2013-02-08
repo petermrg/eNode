@@ -1,6 +1,6 @@
 #eNode - A node.js eD2K/eMule Server
 
-This is a *experimental-buggy-testing-pre-alpha* release. **Not ready to use!**
+This is an *experimental-buggy-testing-pre-alpha* release. **Not ready to use!**
 
 Contributions are welcome.
 
