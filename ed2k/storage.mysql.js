@@ -41,12 +41,16 @@ var sql = {
 
     setErrorListener: function(sqlConnection) {
         sqlConnection.on('error', function(err) {
-            if (!err.fatal) { return; }
-            if (err.code !== 'PROTOCOL_sql_LOST') { sql.def(err); return; }
-            log.warn('MySQL connection Lost. Re-connecting: ' + err.stack);
-            sqlConnection = mysql.createConnection(sqlConnection.config);
-            sql.setErrorListener(sqlConnection);
-            sqlConnection.connect();
+            if (err.code == 'PROTOCOL_CONNECTION_LOST') {
+                log.warn(JSON.stringify(err));
+                log.warn('MySQL connection Lost. Re-connecting.');
+                sqlConnection = mysql.createConnection(sqlConnection.config);
+                sql.setErrorListener(sqlConnection);
+                sqlConnection.connect();
+            }
+            else {
+                sql.def(err, 'ErrorListener');
+            }
         });
     },
 
