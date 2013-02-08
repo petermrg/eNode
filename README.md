@@ -36,7 +36,7 @@ If you want to test the server on a local network, change emule options to allow
 ##To do:
 
 * TCP/UPD protocol obfuscation
-* IPv6 support: [unnoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
+* IPv6 support: [unoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
 * Better storage and indexing. Perhaps with [Sphinx](http://sphinxsearch.com/)
 * Support for [Nat Traversal](http://en.wikipedia.org/wiki/NAT_traversal)
 
