@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Servidor: localhost
--- Tiempo de generación: 09-02-2013 a las 13:06:17
+-- Tiempo de generación: 09-02-2013 a las 13:28:42
 -- Versión del servidor: 5.5.29
 -- Versión de PHP: 5.4.6-1ubuntu1.1
 
@@ -27,16 +27,16 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 CREATE TABLE IF NOT EXISTS `clients` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `hash` binary(16) NOT NULL,
-  `id_ed2k` int(10) unsigned NOT NULL,
-  `ipv4` int(10) unsigned NOT NULL,
-  `port` smallint(5) unsigned NOT NULL,
+  `hash` binary(16) NOT NULL DEFAULT '0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
+  `id_ed2k` int(10) unsigned NOT NULL DEFAULT '0',
+  `ipv4` int(10) unsigned NOT NULL DEFAULT '0',
+  `port` smallint(5) unsigned NOT NULL DEFAULT '0',
   `time_login` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `online` tinyint(1) NOT NULL,
+  `online` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `hash` (`hash`),
   KEY `id_ed2k` (`id_ed2k`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=188 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -46,20 +46,20 @@ CREATE TABLE IF NOT EXISTS `clients` (
 
 CREATE TABLE IF NOT EXISTS `files` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `hash` binary(16) NOT NULL,
-  `size` bigint(20) NOT NULL,
+  `hash` binary(16) NOT NULL DEFAULT '0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
+  `size` bigint(20) NOT NULL DEFAULT '0',
   `time_creation` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `time_offer` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `source_id` int(10) unsigned NOT NULL,
-  `source_port` smallint(5) unsigned NOT NULL,
-  `sources` int(11) NOT NULL,
-  `completed` int(11) NOT NULL,
+  `source_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `source_port` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `sources` int(11) NOT NULL DEFAULT '0',
+  `completed` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `hash_size` (`hash`,`size`),
   KEY `hash` (`hash`),
   KEY `size` (`size`),
   KEY `time_creation` (`time_creation`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=55629 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -69,21 +69,21 @@ CREATE TABLE IF NOT EXISTS `files` (
 
 CREATE TABLE IF NOT EXISTS `sources` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `id_file` bigint(20) unsigned NOT NULL,
-  `id_client` bigint(20) unsigned NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `ext` varchar(8) NOT NULL,
+  `id_file` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `id_client` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `name` varchar(255) NOT NULL DEFAULT '''''',
+  `ext` varchar(8) NOT NULL DEFAULT '''''',
   `time_offer` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `type` enum('Image','Audio','Video','Pro','Doc') NOT NULL,
-  `rating` tinyint(2) unsigned NOT NULL,
-  `title` varchar(128) NOT NULL,
-  `artist` varchar(128) NOT NULL,
-  `album` varchar(128) NOT NULL,
-  `length` int(8) unsigned NOT NULL,
-  `bitrate` int(8) unsigned NOT NULL,
-  `codec` varchar(32) NOT NULL,
-  `online` tinyint(1) NOT NULL,
-  `complete` tinyint(1) NOT NULL,
+  `type` enum('Image','Audio','Video','Pro','Doc','') NOT NULL DEFAULT '',
+  `rating` tinyint(2) unsigned NOT NULL DEFAULT '0',
+  `title` varchar(128) NOT NULL DEFAULT '''''',
+  `artist` varchar(128) NOT NULL DEFAULT '''''',
+  `album` varchar(128) NOT NULL DEFAULT '''''',
+  `length` int(8) unsigned NOT NULL DEFAULT '0',
+  `bitrate` int(8) unsigned NOT NULL DEFAULT '0',
+  `codec` varchar(32) NOT NULL DEFAULT '''''',
+  `online` tinyint(1) NOT NULL DEFAULT '0',
+  `complete` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_file+id_client` (`id_file`,`id_client`),
   KEY `id_file` (`id_file`),
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `sources` (
   KEY `complete` (`complete`),
   KEY `ext` (`ext`),
   KEY `type` (`type`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=62010 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
 --
 -- Filtros para las tablas descargadas (dump)
