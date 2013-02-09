@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Servidor: localhost
--- Tiempo de generación: 08-02-2013 a las 18:27:48
+-- Tiempo de generación: 09-02-2013 a las 12:56:29
 -- Versión del servidor: 5.5.29
 -- Versión de PHP: 5.4.6-1ubuntu1.1
 
@@ -25,7 +25,8 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 -- Estructura de tabla para la tabla `clients`
 --
 
-CREATE TABLE IF NOT EXISTS `clients` (
+DROP TABLE IF EXISTS `clients`;
+CREATE TABLE `clients` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `hash` binary(16) NOT NULL,
   `id_ed2k` int(10) unsigned NOT NULL,
@@ -44,7 +45,8 @@ CREATE TABLE IF NOT EXISTS `clients` (
 -- Estructura de tabla para la tabla `files`
 --
 
-CREATE TABLE IF NOT EXISTS `files` (
+DROP TABLE IF EXISTS `files`;
+CREATE TABLE `files` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `hash` binary(16) NOT NULL,
   `size` bigint(20) NOT NULL,
@@ -67,7 +69,8 @@ CREATE TABLE IF NOT EXISTS `files` (
 -- Estructura de tabla para la tabla `sources`
 --
 
-CREATE TABLE IF NOT EXISTS `sources` (
+DROP TABLE IF EXISTS `sources`;
+CREATE TABLE `sources` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `id_file` bigint(20) unsigned NOT NULL,
   `id_client` bigint(20) unsigned NOT NULL,
