@@ -4,7 +4,7 @@ var hexDump = require('hexy').hexy;
 var misc = require('./misc.js');
 var Packet = require('./packet.js').Packet;
 var log = require('tinylogger');
-var lowIdClients = require('./tcpserver.js').lowIdClients;
+var lowIdClients = require('./lowidclients.js').lowIdClients;
 var conf = require('../enode.config.js').config;
 require('./buffer.js');
 
@@ -133,6 +133,7 @@ OP_GLOBSEARCHRES
             //FLAG_UDP_UDPOBFUSCATION +
             //FLAG_UDP_TCPOBFUSCATION;
         log.trace('UDP flags: 0x'+flags.toString(16)+' - '+flags.toString(2));
+        log.todo('UDP globServStatRes sends fake values. Fixit for production');
         var pack = [
             [TYPE_UINT8, OP_GLOBSERVSTATRES],
             [TYPE_UINT32, challenge],
