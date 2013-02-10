@@ -149,6 +149,7 @@ Packet.prototype.append = function(buffer) {
     } catch (err) {
         log.error('packet.append: '+err);
         log.text(hexDump(buffer.slice(0,32)));
+        this.status = PS_NEW;
     }
     return this;
 };

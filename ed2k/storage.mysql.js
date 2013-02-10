@@ -88,44 +88,72 @@ clients = {
 
     count: 0,
 
-    connect: function(clientInfo, callback) {
-        try {
-            var c = clientInfo;
-            var clientHash = new Buffer(c.hash, 'hex');
-            sql.query('SELECT id, online FROM clients WHERE hash = ? LIMIT 1', [clientHash], function(err, rows){
-                if (err) throw(err);
-                if ((rows.length > 0) && (rows[0].online == 1)) throw { message: 'clients.connect: Error: Already connected' };
-                else {
-                    var v = {
-                        hash: clientHash,
-                        id_ed2k: c.id,
-                        ipv4: misc.IPv4toInt32LE(c.remoteAddress),
-                        port: c.port,
-                        online: 1,
-                    };
-                    sql.query('INSERT INTO clients SET ? ON DUPLICATE KEY UPDATE ? ', [v,v], function(err){
-                        if (err) throw(err);
-                        // get last insert id
-                        sql.query('SELECT id FROM clients WHERE hash = ?', [clientHash], function(err, rows){
-                            if (err) throw(err);
-                            if (rows.length < 1) throw { message: 'clients.connect: Error: Problem inserting/selecting user.' };
-                            clients.count++;
-                            callback(rows[0].id);
-                        });
-                    });
-                }
-            });
-        } catch (err) {
-            sql.defErr(err);
-            callback(false);
-        }
+    /**
+     * @param {Object} clientInfo Client connection information
+     * @param {Buffer} clientInfo.hash Hash value reported on connection
+     * @param {Function(err, connected)} callback
+     * @returns undefined
+     **/
+    isConnected: function(clientInfo, callback) {
+        sql.query('SELECT id FROM clients WHERE hash = ? AND online = 1 LIMIT 1', [clientInfo.hash], function(err, rows){
+            if (err) {
+                callback(err);
+                return;
+            }
+            if (rows.length > 0) {
+                callback(false, true);
+                return;
+            }
+            callback(false, false);
+        });
     },
 
+    /**
+     * @param {Object} clientInfo Client connection information
+     * @param {Buffer} clientInfo.hash
+     * @param {Integer} clientInfo.id
+     * @param {Integer} clientInfo.ipv4
+     * @param {Integer} clientInfo.port
+     * @param {Function(err, storageId)} callback
+     * @returns undefined
+     **/
+    connect: function(clientInfo, callback) {
+        var v = {
+            hash: clientInfo.hash,
+            id_ed2k: clientInfo.id,
+            ipv4: clientInfo.ipv4,
+            port: clientInfo.port,
+            online: 1,
+        };
+        sql.query('INSERT INTO clients SET ? ON DUPLICATE KEY UPDATE ? ', [v,v], function(err){
+            if (err) { callback(err); return; }
+            sql.query('SELECT id FROM clients WHERE hash = ? LIMIT 1', [clientInfo.hash], function(err, rows){
+
+                if (err) { callback(err); return; }
+                if (rows.length < 1) {
+                    callback('MySQL clients.connect: Error inserting client');
+                    return;
+                }
+                clients.count++;
+                callback(false, rows[0].id);
+            });
+        });
+    },
+
+    /**
+     * @description Sets online status of client and client's file to 0
+     * @param {Object} clientInfo Client connection information
+     * @param {Integer} clientInfo.storageId
+     * @param {Boolean} clientInfo.logged
+     * @returns undefined
+     **/
     disconnect: function(clientInfo) { // when a user disconnects, set his online status to 0
         if (clientInfo.logged) {
-            //log.trace('Client disconnect '+(clientInfo.remoteAddress));
+            clientInfo.logged = false;
+            log.info('client.disconnect: '+(clientInfo.storageId));
             sql.query('UPDATE clients SET online = 0 WHERE id = ?', [clientInfo.storageId]);
             sql.query('UPDATE sources SET online = 0 WHERE id_client = ?', [clientInfo.storageId]);
+            log.todo('client.disconnect: Update client\'s files values for sources and completed ??');
             clients.count--;
         }
     },

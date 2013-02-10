@@ -5,6 +5,7 @@ exports.init = function(callback) { return engine.init(callback); };
 
 exports.clients = {
     count: function() { return engine.clients.count; },
+    isConnected: function(clientInfo, callback) { return engine.clients.isConnected(clientInfo, callback); },
     connect: function(clientInfo, callback) { return engine.clients.connect(clientInfo, callback); },
     disconnect: function(clientInfo) { return engine.clients.disconnect(clientInfo); },
 };

@@ -83,7 +83,18 @@ var receive = {
 }
 
 var send = {
-
+/*
+[13:45:10] David Xanatos: look at case OP_GLOBSEARCHRES:{ in udpsockets.cpp
+[13:46:09] David Xanatos: it seams you can concatinate multiple udp packets in one frame
+[13:47:47] David Xanatos: it must look like:
+OP_EDONKEYPROT
+OP_GLOBSEARCHRES
+<file>
+OP_EDONKEYPROT
+OP_GLOBSEARCHRES
+<netxt file>
+...
+*/
     globSearchRes: function(files, info){
         log.info('GLOBSEARCHRES > '+info.address+' ('+files.length+' files)');
         files.forEach(function(file){

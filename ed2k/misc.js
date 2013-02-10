@@ -1,7 +1,7 @@
 var crypto = require('crypto');
 
-exports.enc = function(obj) { return new Buffer(JSON.stringify(obj)); };
-exports.dec = function(buf) { return JSON.parse(buf.toString()); };
+//exports.enc = function(obj) { return new Buffer(JSON.stringify(obj)); };
+//exports.dec = function(buf) { return JSON.parse(buf.toString()); };
 
 exports.ext = function(name) { return name.substring(name.lastIndexOf('.')+1, name.length).toLowerCase(); };
 
@@ -38,3 +38,4 @@ exports.getFileType = function(name) {
     if (extensions.pro  .indexOf(ext)>=0) return 'Pro';
     return '';
 };
+
