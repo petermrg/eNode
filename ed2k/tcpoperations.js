@@ -1,17 +1,18 @@
 var log = require('tinylogger');
 var db = require('./storage.js');
 var net = require('net');
+var zlib = require('zlib');
+var hexDump = require('hexy').hexy;
 var conf = require('../enode.config.js').config;
 var Packet = require('./packet.js').Packet;
 var lowIdClients = require('./lowidclients.js').lowIdClients;
 
 /**
  * @description Checks if a client is firewalled
- * @param {net.Socket} client
- * @param {net.Socket.remoteAddress} remoteAddress
- * @param {net.Socket.info} client info
- * @param {net.Socket.info.port} client port to check
- * @param {Function(firewalled)}
+ * @param {Socket} client
+ * @param {Object} client.info Client information
+ * @param {Integer} client.info.port Port to check
+ * @param {Function} callback(firewalled)
  * @requires {Object} conf global configuration
  */
 var isFirewalled = function(client, callback) {
@@ -25,10 +26,74 @@ var isFirewalled = function(client, callback) {
     });
 }
 
+/**
+ * @description Processes incoming TCP data
+ * @param {Buffer} data Incoming data
+ * @param {Socket} client The client who sends the data
+ * @param {Packet} client.packet Packet object from client
+ */
+var processData = function(data, client) {
+    switch (client.packet.status) {
+        case PS_NEW: client.packet.init(data); break;
+        case PS_WAITING_DATA: client.packet.append(data); break;
+        default: log.error('processTcp: Bad packet status: 0x'+client.packet.status);
+    }
+    if (client.packet.status == PS_READY) {
+        parse(client);
+        if (client.packet.hasExcess) {
+            processTcp(client.packet.excess, client);
+        }
+    }
+};
+exports.processData = processData;
+
+/**
+ * @description Parses a clients packet and depending on it's header takes action
+ * @param {Socket} client
+ * @param {Packet} client.packet Packet object from client
+ */
+var parse = function(client) {
+    //log.trace('TCP op.receive.parse');
+    //log.trace(client.info);
+    switch (client.packet.protocol) {
+        case PR_ED2K:
+            ed2k(client);
+            break;
+        case PR_ZLIB:
+            zlib.unzip(client.packet.data, function(err, buffer) {
+                if (!err) {
+                    client.packet.data = buffer;
+                    ed2k(client);
+                }
+                else {
+                    log.error('Cannot unzip: operation 0x'+client.packet.code.tostring(16));
+                }
+            });
+            break;
+        case PR_EMULE:
+            log.warn('TCP: Unsupported protocol: PR_EMULE (0x'+
+                client.packet.protocol.toString(16)+')');
+            break;
+        default:
+            log.warn('TCP: Unknown protocol: 0x'+client.packet.protocol.toString(16));
+            log.text(hexDump(client.packet.data));
+    }
+    client.packet.status = PS_NEW;
+};
+
+/**
+ * @description Error handler for socket.write operations
+ * @param err Information about the error or false if there isn't.
+ */
 var writeError = function(err) {
     if (err) { log.error('Socket write error: '+JSON.stringify(err)); }
 };
 
+/**
+ * @description Executes an eD2K operation
+ * @param {net.Socket} client
+ * @param {Packet} client.packet
+ */
 var ed2k = function(client) {
     client.packet.data.pos(0);
     switch (client.packet.code) {
@@ -65,9 +130,6 @@ var receive = {
         });
     },
 
-    /**
-     * @param {net.Socket} client
-     */
     loginRequest: function(client) {
         log.debug(client.info.ipv4+' > LOGINREQUEST');
         var data = client.packet.data;
@@ -75,7 +137,7 @@ var receive = {
         client.info.id = data.getUInt32LE();
         client.info.port = data.getUInt16LE();
         data.getTags(function(tag){
-            log.trace('+ '+tag);
+            //log.trace('Tag: '+tag);
             client.info[tag[0]] = tag[1];
         });
         db.clients.isConnected(client.info, function(err, connected){
@@ -104,7 +166,7 @@ var receive = {
     },
 
     offerFiles: function(client) {
-        log.debug('OFFERFILES < '+client.info.id);
+        log.debug('OFFERFILES < '+client.info.storageId);
         var count = client.packet.data.getFileList(function(file){
             //log.trace(file.name+' '+file.size+' '+file.hash.toString('hex'));
             db.files.add(file, client.info);
@@ -114,13 +176,13 @@ var receive = {
     },
 
     getServerList: function(client) {
-        log.debug('GETSERVERLIST < '+client.info.id);
+        log.debug('GETSERVERLIST < '+client.info.storageId);
         send.serverList(client);
         send.serverIdent(client);
     },
 
     getSources: function(client) {
-        log.debug('GETSOURCES < '+client.info.id);
+        log.debug('GETSOURCES < '+client.info.storageId);
         var file = {
             hash: client.packet.data.get(16),
             size: client.packet.data.getUInt32LE(),
@@ -137,7 +199,7 @@ var receive = {
     },
 
     searchRequest: function(client) {
-        log.info('SEARCHREQUEST < '+client.info.id);
+        log.info('SEARCHREQUEST < '+client.info.storageId);
         //log.text(hexDump(client.packet.data));
         db.files.find(client.packet.data, function(files){
             send.searchResult(files, client);
@@ -153,7 +215,7 @@ var receive = {
 //    |<----CallbackFailed----<|                          |
 
     callbackRequest: function(client) {
-        log.info('CALLBACKREQUEST < '+client.info.id);
+        log.info('CALLBACKREQUEST < '+client.info.storageId);
         var lowId = client.packet.data.getUInt32LE(); // properties are hex strings
         clientWithLowId = lowIdClients.get(lowId);
         if (clientWithLowId != false) {
@@ -170,7 +232,7 @@ var receive = {
 var send = {
 
     foundSources: function(fileHash, sources, client) {
-        log.debug('FOUNDSOURCES > '+client.info.id);
+        log.debug('FOUNDSOURCES > '+client.info.storageId);
         var pack = [
             [TYPE_UINT8, OP_FOUNDSOURCES],
             [TYPE_HASH, fileHash],
@@ -185,7 +247,7 @@ var send = {
     },
 
     searchResult: function(files, client) {
-        log.debug('SEARCHRESULT > '+client.info.id);
+        log.debug('SEARCHRESULT > '+client.info.storageId);
         var pack = [
             [TYPE_UINT8, OP_SEARCHRESULT],
             [TYPE_UINT32, files.length]
@@ -198,7 +260,7 @@ var send = {
     },
 
     serverList: function(client) {
-        log.debug('SERVERLIST > '+client.info.id);
+        log.debug('SERVERLIST > '+client.info.storageId);
         var pack = [
             [TYPE_UINT8, OP_SERVERLIST],
             [TYPE_UINT8, db.servers.count()],
@@ -213,7 +275,7 @@ var send = {
     },
 
     serverStatus: function(client) {
-        log.debug('SERVERSTATUS > '+client.info.id+' clients: '+db.clients.count()+
+        log.debug('SERVERSTATUS > '+client.info.storageId+' clients: '+db.clients.count()+
             ' files: '+db.files.count());
         var pack = Packet.make(PR_ED2K, [
             [TYPE_UINT8, OP_SERVERSTATUS],
@@ -224,7 +286,7 @@ var send = {
     },
 
     idChange: function(id, client) {
-        log.debug('IDCHANGE > '+client.info.id+' id: '+id);
+        log.debug('IDCHANGE > '+client.info.storageId+' id: '+id);
         var flags = FLAG_ZLIB + FLAG_NEWTAGS + FLAG_UNICODE + FLAG_LARGEFILES +
             (conf.auxiliarPort ? FLAG_AUXPORT : 0) +
             (conf.requireCrypt ? FLAG_REQUIRECRYPT : 0) +
@@ -240,33 +302,29 @@ var send = {
     },
 
     callbackFailed: function(client) {
-        log.debug('CALLBACKFAILED > '+client.info.id+' id: '+id);
+        log.debug('CALLBACKFAILED > '+client.info.storageId+' id: '+id);
         var pack = [[TYPE_UINT8, OP_CALLBACKFAILED]];
         client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     serverIdent: function(client) {
-        log.debug('SERVERIDENT > '+client.info.id);
-        if (Packet.cache.serverIdent == undefined) {
-            var hash = new Buffer(16);
-            hash.write(misc.md5(conf.name+conf.tcp.port+conf.version), 'hex');
-            var pack = [
-                [TYPE_UINT8, OP_SERVERIDENT],
-                [TYPE_HASH, hash],
-                [TYPE_UINT32, misc.IPv4toInt32LE(conf.address)],
-                [TYPE_UINT16, conf.tcp.port],
-                [TYPE_TAGS, [
-                    [TYPE_STRING, TAG_SERVER_NAME, conf.name],
-                    [TYPE_STRING, TAG_SERVER_DESC, conf.description]
-                ]],
-            ];
-            Packet.cache.serverIdent = Packet.make(PR_ED2K, pack);
-        }
-        client.write(Packet.cache.serverIdent, writeError);
+        log.debug('SERVERIDENT > '+client.info.storageId);
+        var hash = new Buffer(misc.md5(conf.address+conf.tcp.port), 'hex');
+        var pack = [
+            [TYPE_UINT8, OP_SERVERIDENT],
+            [TYPE_HASH, hash],
+            [TYPE_UINT32, misc.IPv4toInt32LE(conf.address)],
+            [TYPE_UINT16, conf.tcp.port],
+            [TYPE_TAGS, [
+                [TYPE_STRING, TAG_SERVER_NAME, conf.name],
+                [TYPE_STRING, TAG_SERVER_DESC, conf.description]
+            ]],
+        ];
+        client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     serverMessage: function(message, client) {
-        log.debug('SERVERMESSAGE > '+client.info.id+' '+message);
+        log.debug('SERVERMESSAGE > '+client.info.storageId+' '+message);
         var pack = Packet.make(PR_ED2K, [
             [TYPE_UINT8, OP_SERVERMESSAGE],
             [TYPE_STRING, message.toString()],
@@ -291,6 +349,3 @@ var send = {
 
 };
 
-exports.ed2k = ed2k;
-//exports.receive = receive;
-//exports.send = send;

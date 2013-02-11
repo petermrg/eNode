@@ -2,11 +2,14 @@ exports.config = {
 
     name: '(TESTING!!!) eNode',
     description: 'eNode: experimental ed2k server written in node.js',
-    address: '192.168.1.2',
+    //address: '192.168.1.2',
+    address: '192.168.1.48',
     dynIp: '',
 
     messageLowID: 'You have LowID.',
     messageLogin: 'Welcome to eNode!',
+
+    noAssert: false, // Set noAssert to true to skip validation of offset in Buffers
 
     supportCrypt: false, // not implemented
     requestCrypt: false, // not implemented

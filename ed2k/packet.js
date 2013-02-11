@@ -12,7 +12,6 @@ var Packet = function() {
     this.status = PS_NEW;
     this.data = new Buffer(0);
 };
-Packet.cache = {};
 
 // TODO: handle multipart packets sends
 // TODO: gzip compression on sending

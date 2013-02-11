@@ -114,7 +114,7 @@ clients = {
      * @param {Integer} clientInfo.id
      * @param {Integer} clientInfo.ipv4
      * @param {Integer} clientInfo.port
-     * @param {Function(err, storageId)} callback
+     * @param {Function} callback(err, storageId)
      * @returns undefined
      **/
     connect: function(clientInfo, callback) {
