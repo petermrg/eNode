@@ -1,5 +1,5 @@
 var log = require('tinylogger');
-var db = require('./storage.js');
+var db = require('../storage/storage.js');
 var net = require('net');
 var zlib = require('zlib');
 var hexDump = require('hexy').hexy;

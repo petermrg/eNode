@@ -1,4 +1,4 @@
-var db  = require('./storage.js');
+var db = require('../storage/storage.js');
 var hexDump = require('hexy').hexy;
 var misc = require('./misc.js');
 var Packet = require('./packet.js').Packet;
@@ -30,6 +30,7 @@ var processData = function(buffer, info) {
             log.text(hexDump(msg));
     }
 }
+exports.processData = processData;
 
 var receive = {
 

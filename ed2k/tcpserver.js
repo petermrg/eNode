@@ -1,6 +1,6 @@
 var net = require('net');
 var log = require('tinylogger');
-var db = require('./storage.js');
+var db = require('../storage/storage.js');
 var misc = require('./misc.js');
 var Packet = require('./packet.js').Packet;
 var conf = require('../enode.config.js').config;

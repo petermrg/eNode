@@ -32,15 +32,18 @@ exports.config = {
         getFiles: true,
     },
 
-    mysql: {
-        database: 'enode',
-        host: 'localhost',
-        user: 'enode',
-        pass: 'password',
-        log: false,
-        fullLog: false,
-        connections: 32, // number of concurrent connections to MySQL server
-        deadlockDelay: 100, // time to wait (ms) before retry a deadlocked query
+    storage: {
+        engine: 'mysql',
+        mysql: {
+            database: 'enode',
+            host: 'localhost',
+            user: 'enode',
+            pass: 'password',
+            log: false,
+            fullLog: false,
+            connections: 32, // number of concurrent connections to MySQL server
+            deadlockDelay: 100, // time to wait (ms) before retry a deadlocked query
+        },
     },
 
 };
