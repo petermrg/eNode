@@ -1,4 +1,5 @@
 var log = require('tinylogger');
+var conf = require('../enode.config.js').config;
 
 Buffer.prototype._pointer = 0;
 
@@ -14,56 +15,44 @@ Buffer.prototype.pos = function(pos) {
 };
 
 Buffer.prototype.getUInt8 = function() {
-    var r = this.readUInt8(this._pointer);
+    var r = this.readUInt8(this._pointer, conf.noAssert);
     this._pointer+= 1;
     return r;
 };
 
 Buffer.prototype.putUInt8 = function(n) {
-    this.writeUInt8(n, this._pointer);
+    this.writeUInt8(n, this._pointer, conf.noAssert);
     this._pointer+= 1;
     return this;
 };
 
 Buffer.prototype.getUInt16LE = function() {
-    var r = this.readUInt16LE(this._pointer);
+    var r = this.readUInt16LE(this._pointer, conf.noAssert);
     this._pointer+= 2;
     return r;
 };
 
 Buffer.prototype.putUInt16LE = function(n) {
-    this.writeUInt16LE(n, this._pointer);
+    this.writeUInt16LE(n, this._pointer, conf.noAssert);
     this._pointer+= 2;
     return this;
 };
 
 Buffer.prototype.getUInt32LE = function() {
-    var r = this.readUInt32LE(this._pointer);
+    var r = this.readUInt32LE(this._pointer, conf.noAssert);
     this._pointer+= 4;
     return r;
 };
 
 Buffer.prototype.getUInt64LE = function() {
-    var lo = this.readUInt32LE(this._pointer);
-    var hi = this.readUInt32LE(this._pointer+4);
+    var lo = this.readUInt32LE(this._pointer, conf.noAssert);
+    var hi = this.readUInt32LE(this._pointer+4, conf.noAssert);
     this._pointer+= 8;
     return lo + (hi * 0x100000000);
 };
 
-// Buffer.prototype.getFloatLE = function() {
-//     var r = this.readFloatLE(this._pointer);
-//     this._pointer+= 4;
-//     return r;
-// };
-
-// Buffer.prototype.getDoubleLE = function() {
-//     var r = this.readDoubleLE(this._pointer);
-//     this._pointer+= 8;
-//     return r;
-// };
-
 Buffer.prototype.putUInt32LE = function(n) {
-    this.writeUInt32LE(n, this._pointer);
+    this.writeUInt32LE(n, this._pointer, conf.noAssert);
     this._pointer+= 4;
     return this;
 };
@@ -76,7 +65,7 @@ Buffer.prototype.getString = function(length) {
 Buffer.prototype.putString = function(str) {
     var len = Buffer.byteLength(str);
     this.putUInt16LE(len);
-    this.write(str, this._pointer);
+    this.write(str, this._pointer, conf.noAssert);
     this._pointer+= len;
     return this;
 };
@@ -116,16 +105,6 @@ Buffer.prototype.get = function(len) {
     }
     r.pos(0);
     return r;
-};
-
-Buffer.prototype.dump = function() {
-    var p = this._pointer;
-    var s = '';
-    while (p < this.length) {
-        s+= this.readUInt8(p).toString(16)+' ';
-        p++;
-    }
-    return s;
 };
 
 // tags = array of array(type, code, data)
@@ -191,7 +170,7 @@ Buffer.prototype.getTag = function() {
             var length = type - 0x10;
             type = TYPE_STRING;
             this.pos(this.pos()-2);
-            this.writeUInt16LE(length, this.pos());
+            this.writeUInt16LE(length, this.pos(), conf.noAssert);
         } // else handle it as a regular ed2k tag with given 'code' and 'type'
     }
     else {
