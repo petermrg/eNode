@@ -3,9 +3,10 @@ var conf = require('../enode.config.js').config;
 var log = require('tinylogger');
 var op = require('./udpoperations.js');
 
-var udpServer = dgram.createSocket('udp4');
-
 exports.run = function() {
+
+    var udpServer = dgram.createSocket('udp4');
+    op.setUdpServer(udpServer);
 
     udpServer.on('message', function(data, info){
         var buffer = new Buffer(data); // this step should be removed in later versions of node.js

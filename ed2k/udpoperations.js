@@ -11,6 +11,9 @@ var sendError = function(err) {
     if (err) { log.error(err); }
 }
 
+var udpServer;
+exports.setUdpServer = function(server) { udpServer = server; };
+
 var processData = function(buffer, info) {
     var protocol = buffer.getUInt8();
     var code = buffer.getUInt8();
