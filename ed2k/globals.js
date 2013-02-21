@@ -19,6 +19,8 @@ global.OP_SEARCHRESULT     = 0x33;
 global.OP_CALLBACKREQUEST  = 0x1c;
 global.OP_CALLBACKREQUESTED= 0x35;
 global.OP_CALLBACKFAILED   = 0x36;
+global.OP_GETSOURCES_OBFU  = 0x23;
+global.OP_FOUNDSOURCES_OBFU= 0x44;
 
 global.OP_GLOBGETSOURCES   = 0x9a;
 global.OP_GLOBGETSOURCES2  = 0x94;
@@ -49,7 +51,7 @@ global.TAG_SIZE            = 0x02;
 global.TAG_TYPE            = 0x03;
 global.TAG_FORMAT          = 0x04;
 global.TAG_VERSION         = 0x11;
-global.TAG_VERSION2        = 0x91;
+global.TAG_VERSION2        = 0x91; // used in UDP OP_SERVERDESCRES
 global.TAG_PORT            = 0x0f;
 global.TAG_DESCRIPTION     = 0x0b;
 global.TAG_DYNIP           = 0x85;
@@ -69,11 +71,19 @@ global.TAG_MEDIA_BITRATE   = 0xd4;
 global.TAG_MEDIA_CODEC     = 0xd5;
 global.TAG_SEARCHTREE      = 0x0e;
 
-global.FL_PARTIAL_ID       = 0xfcfcfcfc;
-global.FL_PARTIAL_PORT     = 0xfcfc;
-global.FL_COMPLETE_ID      = 0xfbfbfbfb;
-global.FL_COMPLETE_PORT    = 0xfbfb;
+// global.TAG_OBFU_PORT_TCP   = 0x97; // ST_TCPPORTOBFUSCATION
+// global.TAG_OBFU_PORT_UDP   = 0x98; // ST_UDPPORTOBFUSCATION
+// global.TAG_IP              = 0x10;
+// global.TAG_UDP_KEY         = 0x95;
+// global.TAG_UDP_KEY_IP      = 0x96;
 
+// Constant values
+global.VAL_PARTIAL_ID       = 0xfcfcfcfc;
+global.VAL_PARTIAL_PORT     = 0xfcfc;
+global.VAL_COMPLETE_ID      = 0xfbfbfbfb;
+global.VAL_COMPLETE_PORT    = 0xfbfb;
+
+// Flags
 global.FLAG_ZLIB           = 0x0001;
 global.FLAG_IPINLOGIN      = 0x0002;
 global.FLAG_AUXPORT        = 0x0004;
@@ -90,8 +100,8 @@ global.FLAG_UDP_EXTGETSOURCES2 = 0x0020;
 global.FLAG_UDP_OBFUSCATION    = 0x0200;
 global.FLAG_TCP_OBFUSCATION    = 0x0400;
 
-global.ENODE_VERSIONSTR         = 'v0.01a';
-global.ENODE_VERSIONINT         = 0x00000001;
+global.ENODE_VERSIONSTR         = 'v0.02a';
+global.ENODE_VERSIONINT         = 0x00000002;
 global.ENODE_NAME               = 'eNode';
 
 console.log('+--------------+');

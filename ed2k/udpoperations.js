@@ -30,7 +30,7 @@ var processData = function(buffer, info) {
             break;
         default:
             log.warn('UDP: Unsupported protocol 0x'+protocol.toString(16))
-            log.text(hexDump(msg));
+            log.text(hexDump(buffer));
     }
 }
 exports.processData = processData;
@@ -154,24 +154,24 @@ OP_GLOBSEARCHRES
             FLAG_NEWTAGS +
             FLAG_UNICODE +
             FLAG_UDP_EXTGETSOURCES2 +
-            FLAG_LARGEFILES;
-            //FLAG_UDP_UDPOBFUSCATION +
-            //FLAG_UDP_TCPOBFUSCATION;
+            FLAG_LARGEFILES +
+            (conf.supportCrypt ? FLAG_UDP_OBFUSCATION : 0) +
+            (conf.supportCrypt ? FLAG_TCP_OBFUSCATION : 0);
         log.trace('UDP flags: 0x'+flags.toString(16)+' - '+flags.toString(2));
-        log.todo('UDP globServStatRes sends fake values. Fixit for production');
+        log.todo('UDP globServStatRes sends fake values. Fix them for production');
         var pack = [
             [TYPE_UINT8, OP_GLOBSERVSTATRES],
             [TYPE_UINT32, challenge],
             [TYPE_UINT32, db.clients.count()+2000], // fake value, for testing
             [TYPE_UINT32, db.files.count()],
             [TYPE_UINT32, conf.tcp.maxConnections],
-            [TYPE_UINT32, 10000], // server soft file limit ??
-            [TYPE_UINT32, 20000], // server hard file limit ??
+            [TYPE_UINT32, 10000], // server soft file limit ???
+            [TYPE_UINT32, 20000], // server hard file limit ???
             [TYPE_UINT32, flags],
             [TYPE_UINT32, lowIdClients.count()+1000], // fake value, for testing
-            //udpserverkey
-            //obfuscation tcp port
-            //obfuscation udp port
+            [TYPE_UINT16, conf.udp.portObfuscated],
+            [TYPE_UINT16, conf.tcp.portObfuscated],
+            [TYPE_UINT32, 0x12345678], // udp server key
         ];
         var buffer = Packet.makeUDP(PR_ED2K, pack);
         udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
@@ -201,9 +201,16 @@ OP_GLOBSEARCHRES
                 [TYPE_STRING, TAG_DYNIP, conf.dynIp],
                 [TYPE_STRING, TAG_VERSION2, ENODE_VERSIONSTR],
                 [TYPE_UINT32, TAG_VERSION2, ENODE_VERSIONINT],
+
+                // should we send this info here ???
+                // [TYPE_UINT32, TAG_IP, misc.IPv4toInt32LE(conf.address)],
+                // [TYPE_UINT32, TAG_UDP_KEY, 0x12345678], // ???
+                // [TYPE_UINT32, TAG_UDP_KEY_IP, 0x87654321], // ???
+                // [TYPE_UINT16, TAG_OBFU_PORT_TCP, conf.tcp.portObfuscated],
+                // [TYPE_UINT16, TAG_OBFU_PORT_UDP, conf.udp.portObfuscated],
             ]],
         ];
-        //console.dir(JSON.stringify(pack));
+        //log.trace('UDP servDescRes: '+JSON.stringify(pack));
         //console.dir(info);
         var buffer = Packet.makeUDP(PR_ED2K, pack);
         udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);

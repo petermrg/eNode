@@ -2,8 +2,9 @@ exports.config = {
 
     name: '(TESTING!!!) eNode',
     description: 'eNode: experimental ed2k server written in node.js',
-    //address: '192.168.1.2',
-    address: '192.168.1.48',
+    address: '192.168.1.2',
+    //address: '192.168.1.48',
+    //address: '192.168.3.110',
     dynIp: '',
 
     messageLowID: 'You have LowID.',
@@ -11,14 +12,15 @@ exports.config = {
 
     noAssert: false, // Set noAssert to true to skip validation of offset in Buffers
 
-    supportCrypt: false, // not implemented
-    requestCrypt: false, // not implemented
-    requireCrypt: false, // not implemented
+    supportCrypt: true,
+    requestCrypt: true, // not implemented
+    requireCrypt: true, // not implemented
     auxiliarPort: false, // ??
     IPinLogin: false, // ??
 
     tcp: {
         port: 5555,
+        portObfuscated: 55555,
         maxConnections: 1000000,
         connectionTimeout: 2000, // time to wait before giving LowId (ms)
         allowLowIDs: true,
@@ -28,6 +30,7 @@ exports.config = {
 
     udp: {
         port: 5559, // tcp+4
+        portObfuscated: 5559+12,
         getSources: true,
         getFiles: true,
     },

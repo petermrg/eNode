@@ -237,10 +237,10 @@ Buffer.prototype.getFileList = function(callback) {
             //log.trace(tag);
             file[tag[0]] = tag[1];
         });
-        if ((id == FL_PARTIAL_ID) && (port == FL_PARTIAL_PORT)) {
+        if ((id == VAL_PARTIAL_ID) && (port == VAL_PARTIAL_PORT)) {
             file.complete = 0;
         }
-        else if ((id == FL_COMPLETE_ID) && (port == FL_COMPLETE_PORT)) {
+        else if ((id == VAL_COMPLETE_ID) && (port == VAL_COMPLETE_PORT)) {
             file.complete = 1;
         }
         file.sizeLo = file.size;
