@@ -11,7 +11,7 @@ global.CS_UNKNOWN     = 1;
 global.CS_NEGOTIATING = 4;
 global.CS_ENCRYPTING  = 5;
 
-// Encryprion Methods
+// Encryption Methods
 var EM_OBFUSCATE = 0;
 var EM_PREFERRED = EM_OBFUSCATE;
 var EM_SUPPORTED = EM_OBFUSCATE;
