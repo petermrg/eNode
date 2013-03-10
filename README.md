@@ -40,10 +40,12 @@ If you want to test the server on a local network, change emule options to allow
 ##To do:
 
 * gzip compression on send
+* Obfuscated LowId detection
 * UDP protocol obfuscation
 * IPv6 support: [unoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
-* Better storage and indexing. Perhaps with [Sphinx](http://sphinxsearch.com/)
+* Better storage/indexing
 * Support for [Nat Traversal](http://en.wikipedia.org/wiki/NAT_traversal)
+* Send OP_SERVERSTATUS every 5 minutes to connected clients
 
 ##Thanks to:
 

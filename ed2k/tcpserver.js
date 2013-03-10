@@ -8,7 +8,6 @@ var conf = require('../enode.config.js').config;
 var lowIdClients = require('./lowidclients.js').lowIdClients;
 var op = require('./tcpoperations.js');
 
-
 exports.run = function(enableCrypt, port, callback) {
 
     var server = net.createServer(function(client){
@@ -71,3 +70,23 @@ exports.run = function(enableCrypt, port, callback) {
     });
 
 };
+
+var updateConfig = function() {
+    console.log('+--------------+');
+    console.log('| '+ENODE_NAME+' '+ENODE_VERSIONSTR+' |');
+    console.log('+--------------+');
+
+    conf.hash = misc.md5(conf.address+conf.tcp.port);
+    log.info('Server hash: '+conf.hash.toString('hex'));
+
+    conf.tcp.flags = FLAG_ZLIB + FLAG_NEWTAGS + FLAG_UNICODE + FLAG_LARGEFILES +
+        (conf.auxiliarPort ? FLAG_AUXPORT : 0) +
+        (conf.requireCrypt ? FLAG_REQUIRECRYPT : 0) +
+        (conf.requestCrypt ? FLAG_REQUESTCRYPT : 0) +
+        (conf.supportCrypt ? FLAG_SUPPORTCRYPT : 0) +
+        (conf.IPinLogin ? FLAG_IPINLOGIN : 0);
+    log.info('TCP flags: 0x'+conf.tcp.flags.toString(16)+' - '+conf.tcp.flags.toString(2));
+
+};
+exports.updateConfig = updateConfig;
+updateConfig();

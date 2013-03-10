@@ -158,6 +158,7 @@ Buffer.prototype.getTagValue = function(type) {
             value = false;
             log.error('Unknown tag type: 0x'+type.toString(16));
     }
+    //log.trace('TAG: type: '+type+' value: '+value);
     return value;
 };
 
@@ -203,9 +204,11 @@ Buffer.prototype.getTag = function() {
         case TAG_MEDIA_BITRATE: tag = ['bitrate', this.getTagValue(type)]; break;
         case TAG_MEDIA_CODEC: tag = ['codec', this.getTagValue(type)]; break;
         case TAG_SEARCHTREE: tag = ['searchtree', this.getTagValue(type)]; break;
+        case TAG_EMULE_UDPPORTS: tag = ['udpports', this.getTagValue(type)]; break;
+        case TAG_EMULE_OPTIONS1: tag = ['options1', this.getTagValue(type)]; break;
+        case TAG_EMULE_OPTIONS2: tag = ['options2', this.getTagValue(type)]; break;
         default:
-            tag = ['unknown', this.getTagValue(type)];
-            log.warn('Unknown tag code: 0x'+code.toString(16)+' Value: '+JSON.stringify(tag));
+            tag = ['0x'+code.toString(16), this.getTagValue(type)];
     }
     return tag;
 };
@@ -213,14 +216,14 @@ Buffer.prototype.getTag = function() {
 Buffer.prototype.getTags = function(callback) {
     var count = this.getUInt32LE();
     //log.trace('Got '+count+' tags');
-    //var tags = [];
+    var tags = [];
     while (count--) {
         var tag = this.getTag();
         if (tag === false) return ['TAGERROR',true];
-        //tags.push(tag);
+        tags.push(tag);
         if (callback != undefined) callback(tag);
     }
-    //return tags;
+    return tags;
 };
 
 Buffer.prototype.getFileList = function(callback) {

@@ -103,15 +103,14 @@ Packet.addFile = function(packet, file) {
 }
 
 Packet.prototype.init = function(buffer) {
-    log.trace('Packet.init() buffer.length: '+buffer.length);
+    //log.trace('Packet.init() buffer.length: '+buffer.length);
     this.hasExcess = false;
     this.protocol = buffer.getUInt8();
     if ((this.protocol == PR_ED2K) || (this.protocol == PR_ZLIB) || (this.protocol == PR_EMULE)) {
         this.size = buffer.getUInt32LE()-1;
         this.code = buffer.getUInt8();
-        log.trace('Packet init: protocol: 0x'+this.protocol.toString(16)+
-            ' data size (header): '+this.size+
-            ' opcode: 0x'+this.code.toString(16));
+        // log.trace('Packet init: protocol: 0x'+this.protocol.toString(16)+
+        //     ' data size (header): '+this.size+' opcode: 0x'+this.code.toString(16));
         //TODO do checkings here
         this.data = new Buffer(this.size);
         this.append(buffer.get());
@@ -131,7 +130,7 @@ Packet.prototype.init = function(buffer) {
 
 Packet.prototype.append = function(buffer) {
     // try {
-        log.trace('packet.append');
+        //log.trace('packet.append');
         var received = this.data.pos();
         this.data.putBuffer(buffer);
         received+= buffer.length;

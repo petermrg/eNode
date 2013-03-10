@@ -2,9 +2,10 @@ exports.config = {
 
     name: '(TESTING!!!) eNode',
     description: 'eNode: experimental ed2k server written in node.js',
-    //address: '192.168.1.2',
-    address: '192.168.1.35',
-    //address: '192.168.3.110',
+    address: '192.168.1.2',
+    //address: '192.168.1.35',
+    //address: '192.168.1.33',
+    //address: '192.168.43.61',
     dynIp: '',
 
     messageLowID: 'You have LowID.',
@@ -20,7 +21,7 @@ exports.config = {
 
     tcp: {
         port: 5555,
-        portObfuscated: 55555,
+        portObfuscated: 5565,
         maxConnections: 1000000,
         connectionTimeout: 2000, // time to wait before giving LowId (ms)
         allowLowIDs: true,
@@ -30,7 +31,7 @@ exports.config = {
 
     udp: {
         port: 5559, // tcp+4
-        portObfuscated: 5559+12,
+        portObfuscated: 5569,
         getSources: true,
         getFiles: true,
     },
@@ -50,3 +51,4 @@ exports.config = {
     },
 
 };
+

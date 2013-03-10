@@ -15,7 +15,9 @@ var lowIdClients = {
         lowIdClients._next++;
         while (lowIdClients._clients.hasOwnProperty[lowIdClients._next]) {
             lowIdClients._next++;
-            if (lowIdClients._next > lowIdClients._max) { lowIdClients._next = lowIdClients._min; };
+            if (lowIdClients._next > lowIdClients._max) {
+                lowIdClients._next = lowIdClients._min;
+            }
         }
         return r;
     },

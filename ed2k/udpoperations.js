@@ -11,20 +11,18 @@ var sendError = function(err) {
     if (err) { log.error(err); }
 }
 
-var udpServer;
-exports.setUdpServer = function(server) { udpServer = server; };
-
-var processData = function(buffer, info) {
+var processData = function(buffer, info, udpServer) {
     var protocol = buffer.getUInt8();
     var code = buffer.getUInt8();
     switch (protocol) {
         case PR_ED2K:
             switch (code) {
-                case OP_GLOBGETSOURCES: receive.globGetSources(buffer, info); break;
-                case OP_GLOBGETSOURCES2: receive.globGetSources2(buffer, info); break;
-                case OP_GLOBSERVSTATREQ: receive.globServStatReq(buffer, info); break;
-                case OP_SERVERDESCREQ: receive.servDescReq(buffer, info); break;
-                case OP_GLOBSEARCHREQ3: receive.globSearchReq3(buffer, info); break;
+                case OP_GLOBGETSOURCES: receive.globGetSources(buffer, info, udpServer); break;
+                case OP_GLOBGETSOURCES2: receive.globGetSources2(buffer, info, udpServer); break;
+                case OP_GLOBSERVSTATREQ: receive.globServStatReq(buffer, info, udpServer); break;
+                case OP_SERVERDESCREQ: receive.servDescReq(buffer, info, udpServer); break;
+                case OP_GLOBSEARCHREQ: receive.globSearchReq(buffer, info, udpServer); break;
+                case OP_GLOBSEARCHREQ3: receive.globSearchReq3(buffer, info, udpServer); break;
                 default: log.warn('UDP processData: unknown operation code: 0x'+code.toString(16));
             }
             break;
@@ -37,7 +35,7 @@ exports.processData = processData;
 
 var receive = {
 
-    globGetSources: function(buffer, info) {
+    globGetSources: function(buffer, info, udpServer) {
         log.info('GLOBGETSOURCES < '+info.address+':'+info.port);
         if (!conf.udp.getSources) { return; }
         buffer = buffer.get();
@@ -46,7 +44,7 @@ var receive = {
             var hash = buffer.get(16);
             db.files.getSourcesByHash(hash, function(fileHash, sources){
                 log.trace('Got '+sources.length+' sources for file: '+fileHash.toString('hex'));
-                if (sources.length > 0) { send.globFoundSources(fileHash, sources, info); }
+                if (sources.length > 0) { send.globFoundSources(fileHash, sources, info, udpServer); }
             });
         }
         if (buffer.pos() < buffer.length) {
@@ -54,7 +52,7 @@ var receive = {
         }
     },
 
-    globGetSources2: function(buffer, info) {
+    globGetSources2: function(buffer, info, udpServer) {
         log.info('GLOBGETSOURCES2 < '+info.address+':'+info.port);
         while (buffer.pos()+16+4 <= buffer.length) {
             var hash = buffer.get(16);
@@ -62,7 +60,7 @@ var receive = {
             if (size == 0) { size = buffer.getUInt64LE(); }
             db.files.getSources(hash, size, function(fileHash, sources){
                 log.trace('Got '+sources.length+' sources for file: '+fileHash.toString('hex'));
-                if (sources.length > 0) { send.globFoundSources(fileHash, sources, info); }
+                if (sources.length > 0) { send.globFoundSources(fileHash, sources, info, udpServer); }
             });
         }
         if (buffer.pos() < buffer.length) {
@@ -70,25 +68,34 @@ var receive = {
         }
     },
 
-    globServStatReq: function(buffer, info) {
+    globServStatReq: function(buffer, info, udpServer) {
         log.info('GLOBSERVSTATREQ < '+info.address+':'+info.port);
         var challenge = buffer.getUInt32LE();
-        send.globServStatRes(challenge, info);
+        send.globServStatRes(challenge, info, udpServer);
     },
 
-    servDescReq: function(buffer, info) {
+    servDescReq: function(buffer, info, udpServer) {
         log.info('SERVERDESCREQ < '+info.address+':'+info.port);
         //console.log(info);
         if (info.size < 6) {
-            send.servDescResOld(info);
+            send.servDescResOld(info, udpServer);
         }
         else {
             var challenge = buffer.getUInt32LE();
-            send.servDescRes(challenge, info);
+            send.servDescRes(challenge, info, udpServer);
         }
     },
 
-    globSearchReq3: function(buffer, info) {
+    globSearchReq: function(buffer, info, udpServer) {
+        log.info('GLOBSEARCHREQ < '+info.address+':'+info.port);
+        db.files.find(buffer, function(files) {
+            if (files.length > 0) {
+                send.globSearchRes(files, info, udpServer);
+            }
+        });
+    },
+
+    globSearchReq3: function(buffer, info, udpServer) {
         log.info('GLOBSEARCHREQ3 < '+info.address+':'+info.port);
         //console.log(hexDump(buffer));
         buffer.getTags(function(tag){
@@ -99,11 +106,10 @@ var receive = {
         });
         db.files.find(buffer, function(files) {
             if (files.length > 0) {
-                send.globSearchRes(files, info);
+                send.globSearchRes(files, info, udpServer);
             }
         });
     },
-
 
 }
 
@@ -120,7 +126,7 @@ OP_GLOBSEARCHRES
 <netxt file>
 ...
 */
-    globSearchRes: function(files, info){
+    globSearchRes: function(files, info, udpServer){
         log.info('GLOBSEARCHRES > '+info.address+' ('+files.length+' files)');
         files.forEach(function(file){
             var pack = [[TYPE_UINT8, OP_GLOBSEARCHRES]];
@@ -130,7 +136,7 @@ OP_GLOBSEARCHRES
         });
     },
 
-    globFoundSources: function(fileHash, sources, info) {
+    globFoundSources: function(fileHash, sources, info, udpServer) {
         log.info('GLOBFOUNDSOURCES < '+info.address+':'+info.port);
         var pack = [
             [TYPE_UINT8, OP_GLOBFOUNDSOURCES],
@@ -146,19 +152,8 @@ OP_GLOBSEARCHRES
         udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
     },
 
-    globServStatRes: function(challenge, info) {
+    globServStatRes: function(challenge, info, udpServer) {
         log.info('GLOBSERVSTATRES > '+info.address+':'+info.port);
-        var flags =
-            (conf.udp.getSources ? FLAG_UDP_EXTGETSOURCES : 0) +
-            (conf.udp.getFiles ? FLAG_UDP_EXTGETFILES : 0) +
-            FLAG_NEWTAGS +
-            FLAG_UNICODE +
-            FLAG_UDP_EXTGETSOURCES2 +
-            FLAG_LARGEFILES +
-            (conf.supportCrypt ? FLAG_UDP_OBFUSCATION : 0) +
-            (conf.supportCrypt ? FLAG_TCP_OBFUSCATION : 0);
-        log.trace('UDP flags: 0x'+flags.toString(16)+' - '+flags.toString(2));
-        log.todo('UDP globServStatRes sends fake values. Fix them for production');
         var pack = [
             [TYPE_UINT8, OP_GLOBSERVSTATRES],
             [TYPE_UINT32, challenge],
@@ -167,17 +162,20 @@ OP_GLOBSEARCHRES
             [TYPE_UINT32, conf.tcp.maxConnections],
             [TYPE_UINT32, 10000], // server soft file limit ???
             [TYPE_UINT32, 20000], // server hard file limit ???
-            [TYPE_UINT32, flags],
+            [TYPE_UINT32, conf.udp.flags],
             [TYPE_UINT32, lowIdClients.count()+1000], // fake value, for testing
             [TYPE_UINT16, conf.udp.portObfuscated],
             [TYPE_UINT16, conf.tcp.portObfuscated],
-            [TYPE_UINT32, 0x12345678], // udp server key
+            [TYPE_UINT32, 0x12345678], // udp server key ???
         ];
+        console.log(pack);
         var buffer = Packet.makeUDP(PR_ED2K, pack);
+        console.log(hexDump(buffer));
+        console.dir(info);
         udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
     },
 
-    servDescResOld: function(info) {
+    servDescResOld: function(info, udpServer) {
         log.info('SERVERDESCRES (OLD) > '+info.address+':'+info.port);
         var pack = [
             [TYPE_UINT8, OP_SERVERDESCRES],
@@ -190,7 +188,7 @@ OP_GLOBSEARCHRES
         udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
     },
 
-    servDescRes: function(challenge, info) {
+    servDescRes: function(challenge, info, udpServer) {
         log.info('SERVERDESCRES > '+info.address+':'+info.port);
         var pack = [
             [TYPE_UINT8, OP_SERVERDESCRES],
@@ -199,15 +197,9 @@ OP_GLOBSEARCHRES
                 [TYPE_STRING, TAG_NAME, conf.name],
                 [TYPE_STRING, TAG_DESCRIPTION, conf.description],
                 [TYPE_STRING, TAG_DYNIP, conf.dynIp],
-                [TYPE_STRING, TAG_VERSION2, ENODE_VERSIONSTR],
+                //[TYPE_STRING, TAG_VERSION2, ENODE_VERSIONSTR],
                 [TYPE_UINT32, TAG_VERSION2, ENODE_VERSIONINT],
-
-                // should we send this info here ???
-                // [TYPE_UINT32, TAG_IP, misc.IPv4toInt32LE(conf.address)],
-                // [TYPE_UINT32, TAG_UDP_KEY, 0x12345678], // ???
-                // [TYPE_UINT32, TAG_UDP_KEY_IP, 0x87654321], // ???
-                // [TYPE_UINT16, TAG_OBFU_PORT_TCP, conf.tcp.portObfuscated],
-                // [TYPE_UINT16, TAG_OBFU_PORT_UDP, conf.udp.portObfuscated],
+                [TYPE_STRING, TAG_AUXPORTSLIST, ''],
             ]],
         ];
         //log.trace('UDP servDescRes: '+JSON.stringify(pack));

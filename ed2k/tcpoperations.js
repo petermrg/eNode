@@ -7,28 +7,44 @@ var lowIdClients = require('./lowidclients.js').lowIdClients;
 var Packet = require('./packet.js').Packet;
 var zlib = require('zlib');
 var misc = require('./misc.js');
+var serverInfo = require('./tcpserver.js').info;
+var eD2KClient = require('./client.js').Client;
 
 /**
  * @description Checks if a client is firewalled
  * @param {Socket} client
  * @param {Object} client.info Client information
  * @param {Integer} client.info.port Port to check
- * @param {Function} callback(firewalled)
- * @requires {Object} conf global configuration
+ * @param {Function} callback(isFirewalled) Callback argument is boolean. True if firewalled.
  */
 var isFirewalled = function(client, callback) {
-    log.info('Checking if '+client.remoteAddress+':'+client.info.port+' is firewalled...');
-    var socket = new net.Socket();
-    socket.on('error', function(){callback(true)});
-    socket.setTimeout(conf.tcp.connectionTimeout, function(){callback(true)});
-    socket.connect({
-        port: client.info.port,
-        host: client.remoteAddress,
-        localAddress: conf.address,
-    }, function(){
-        callback(false);
-        socket.end();
+    log.info('Checking if firewalled');
+    var testClient = new eD2KClient();
+    testClient.on('connected', function(){
+        log.debug('OP_HELLO > '+client.remoteAddress+':'+client.info.port);
+        testClient.send(OP_HELLO, null, function(err){
+            if (!err) return;
+            testClient.end();
+            callback(true);
+        });
     });
+    testClient.on('error', function(err){
+        log.error(err);
+        testClient.end();
+        callback(true);
+    });
+    testClient.on('timeout', function(){
+        log.error('Connection timeout');
+        testClient.end();
+        callback(true);
+    });
+    testClient.on('opHelloAnswer', function(info){
+        log.info('Received hello answer!');
+        testClient.end();
+        //console.dir(info);
+        callback(false);
+    });
+    testClient.connect(client.remoteAddress, client.info.port);
 };
 
 /**
@@ -84,7 +100,7 @@ var parse = function(packet) {
                     ed2k(packet.client);
                 }
                 else {
-                    log.error('Cannot unzip: operation 0x'+packet.code.tostring(16));
+                    log.error('Cannot unzip: operation 0x'+packet.code.toString(16));
                 }
             });
             break;
@@ -142,7 +158,7 @@ var receive = {
 
     handShake: function(client) {
         db.clients.connect(client.info, function(err, storageId){
-            if (err == false) {
+            if (!err) {
                 client.info.logged = true;
                 log.info('Storage ID: '+storageId);
                 client.info.storageId = storageId;
@@ -150,6 +166,7 @@ var receive = {
                 send.serverMessage('server version '+ENODE_VERSIONSTR+' ('+ENODE_NAME+')', client);
                 send.serverStatus(client);
                 send.idChange(client.info.id, client);
+                send.serverIdent(client);
             }
             else {
                 log.error(err);
@@ -161,18 +178,15 @@ var receive = {
     },
 
     loginRequest: function(client) {
-        log.debug(client.info.ipv4+' > LOGINREQUEST');
+        log.debug('LOGINREQUEST < '+client.info.ipv4);
         var data = client.packet.data;
         client.info.hash = data.get(16);
         client.info.id = data.getUInt32LE();
         client.info.port = data.getUInt16LE();
-        data.getTags(function(tag){
-            log.trace('loginRequest Tag: '+tag);
-            client.info[tag[0]] = tag[1];
-        });
+        client.info.tags = data.getTags();
         db.clients.isConnected(client.info, function(err, connected){
-            if (err) { log.error('loginRequiest: '+err); client.end(); return; }
-            if (connected) { log.error('loginRequiest: already connected'); client.end(); return; }
+            if (err) { log.error('loginRequest: '+err); client.end(); return; }
+            if (connected) { log.error('loginRequest: already connected'); client.end(); return; }
             isFirewalled(client, function(firewalled){
                 if (firewalled) {
                     client.info.hasLowId = true;
@@ -272,7 +286,7 @@ var send = {
 
     foundSources: function(fileHash, sources, client) {
         log.debug('FOUNDSOURCES > '+client.info.storageId);
-        log.todo('OP_FOUNDSOURCES_OBFU: add client crypt info. See PartFile.cpp CPartFile::AddSources');
+        //log.todo('OP_FOUNDSOURCES_OBFU: add client crypt info. See PartFile.cpp CPartFile::AddSources');
         var pack = [
             [TYPE_UINT8, OP_FOUNDSOURCES],
             [TYPE_HASH, fileHash],
@@ -284,7 +298,6 @@ var send = {
         });
         //log.debug(pack);
         submit(Packet.make(PR_ED2K, pack), client);
-        //client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     searchResult: function(files, client) {
@@ -298,7 +311,6 @@ var send = {
             Packet.addFile(pack, file)
         });
         submit(Packet.make(PR_ED2K, pack), client);
-        //client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     serverList: function(client) {
@@ -314,52 +326,40 @@ var send = {
         });
         //console.dir(pack);
         submit(Packet.make(PR_ED2K, pack), client);
-        //client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     serverStatus: function(client) {
         log.debug('SERVERSTATUS > '+client.info.storageId+' clients: '+db.clients.count()+
             ' files: '+db.files.count());
-        var pack = Packet.make(PR_ED2K, [
+        var pack = [
             [TYPE_UINT8, OP_SERVERSTATUS],
             [TYPE_UINT32, db.clients.count()],
             [TYPE_UINT32, db.files.count()]
-        ]);
-        submit(pack, client);
-        //client.write(pack, writeError);
+        ];
+        submit(Packet.make(PR_ED2K, pack), client);
     },
 
     idChange: function(id, client) {
         log.debug('IDCHANGE > '+client.info.storageId+' id: '+id);
-        var flags = FLAG_ZLIB + FLAG_NEWTAGS + FLAG_UNICODE + FLAG_LARGEFILES +
-            (conf.auxiliarPort ? FLAG_AUXPORT : 0) +
-            (conf.requireCrypt ? FLAG_REQUIRECRYPT : 0) +
-            (conf.requestCrypt ? FLAG_REQUESTCRYPT : 0) +
-            (conf.supportCrypt ? FLAG_SUPPORTCRYPT : 0) +
-            (conf.IPinLogin ? FLAG_IPINLOGIN : 0); // ????
-        var pack = Packet.make(PR_ED2K, [
+        var pack = [
             [TYPE_UINT8, OP_IDCHANGE],
             [TYPE_UINT32, id],
-            [TYPE_UINT32, flags]
-        ]);
-        log.trace('idChange Server flags: 0x'+flags.toString(16));
-        submit(pack, client);
-        //client.write(pack, writeError);
+            [TYPE_UINT32, conf.tcp.flags]
+        ];
+        submit(Packet.make(PR_ED2K, pack), client);
     },
 
     callbackFailed: function(client) {
         log.debug('CALLBACKFAILED > '+client.info.storageId+' id: '+id);
         var pack = [[TYPE_UINT8, OP_CALLBACKFAILED]];
         submit(Packet.make(PR_ED2K, pack), client);
-        //client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     serverIdent: function(client) {
         log.debug('SERVERIDENT > '+client.info.storageId);
-        var hash = new Buffer(misc.md5(conf.address+conf.tcp.port), 'hex');
         var pack = [
             [TYPE_UINT8, OP_SERVERIDENT],
-            [TYPE_HASH, hash],
+            [TYPE_HASH, conf.hash],
             [TYPE_UINT32, misc.IPv4toInt32LE(conf.address)],
             [TYPE_UINT16, conf.tcp.port],
             [TYPE_TAGS, [
@@ -368,7 +368,6 @@ var send = {
             ]],
         ];
         submit(Packet.make(PR_ED2K, pack), client);
-        //client.write(Packet.make(PR_ED2K, pack), writeError);
     },
 
     serverMessage: function(message, client) {
@@ -378,10 +377,9 @@ var send = {
             [TYPE_STRING, message.toString()],
         ]);
         submit(pack, client);
-        //client.write(pack, writeError);
     },
 
-    callbackRequested: function(clientWithLowId, client) {
+    callbackRequested: function(clientWithLowId, client) { // TODO TEST
         log.info('CALLBACKREQUESTED > '+clientWithLowId.info.id);
         var pack = [
             [TYPE_UINT8, OP_CALLBACKREQUESTED],
