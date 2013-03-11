@@ -3,7 +3,7 @@ exports.config = {
     name: '(TESTING!!!) eNode',
     description: 'eNode: experimental ed2k server written in node.js',
     address: '192.168.1.2',
-    //address: '192.168.1.35',
+    //address: '192.168.1.50',
     //address: '192.168.1.33',
     //address: '192.168.43.61',
     dynIp: '',

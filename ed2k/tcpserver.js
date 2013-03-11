@@ -2,6 +2,7 @@ var net = require('net');
 var log = require('tinylogger');
 var db = require('../storage/storage.js');
 var misc = require('./misc.js');
+var crypt = require('./crypt.js');
 var Packet = require('./packet.js').Packet;
 var TcpCrypt = require('./tcpcrypt.js').TcpCrypt;
 var conf = require('../enode.config.js').config;
@@ -76,10 +77,14 @@ var updateConfig = function() {
     console.log('| '+ENODE_NAME+' '+ENODE_VERSIONSTR+' |');
     console.log('+--------------+');
 
-    conf.hash = misc.md5(conf.address+conf.tcp.port);
+    conf.hash = crypt.md5(conf.address+conf.tcp.port);
     log.info('Server hash: '+conf.hash.toString('hex'));
 
-    conf.tcp.flags = FLAG_ZLIB + FLAG_NEWTAGS + FLAG_UNICODE + FLAG_LARGEFILES +
+    conf.tcp.flags =
+        FLAG_ZLIB +
+        FLAG_NEWTAGS +
+        FLAG_UNICODE +
+        FLAG_LARGEFILES +
         (conf.auxiliarPort ? FLAG_AUXPORT : 0) +
         (conf.requireCrypt ? FLAG_REQUIRECRYPT : 0) +
         (conf.requestCrypt ? FLAG_REQUESTCRYPT : 0) +

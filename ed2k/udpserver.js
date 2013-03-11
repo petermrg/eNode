@@ -29,8 +29,10 @@ exports.run = function(enableCrypt, port) {
 
 function updateConfig() {
     conf.udp.flags =
-        FLAG_NEWTAGS + FLAG_UNICODE + FLAG_LARGEFILES +
-        (conf.udp.getSources ? (FLAG_UDP_EXTGETSOURCES+FLAG_UDP_EXTGETSOURCES2) : 0) +
+        FLAG_NEWTAGS +
+        FLAG_UNICODE +
+        FLAG_LARGEFILES +
+        (conf.udp.getSources ? (FLAG_UDP_EXTGETSOURCES + FLAG_UDP_EXTGETSOURCES2) : 0) +
         (conf.udp.getFiles ? FLAG_UDP_EXTGETFILES : 0) +
         (conf.supportCrypt ? FLAG_UDP_OBFUSCATION : 0) +
         (conf.supportCrypt ? FLAG_TCP_OBFUSCATION : 0);

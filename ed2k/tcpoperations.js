@@ -1,12 +1,13 @@
+var conf = require('../enode.config.js').config;
 var log = require('tinylogger');
 var db = require('../storage/storage.js');
 var net = require('net');
 var hexDump = require('hexy').hexy;
-var conf = require('../enode.config.js').config;
 var lowIdClients = require('./lowidclients.js').lowIdClients;
 var Packet = require('./packet.js').Packet;
 var zlib = require('zlib');
 var misc = require('./misc.js');
+var crypt = require('./crypt.js');
 var serverInfo = require('./tcpserver.js').info;
 var eD2KClient = require('./client.js').Client;
 
@@ -276,7 +277,7 @@ var receive = {
 var submit = function(data, client, errCallback) {
     if (client.crypt.status == CS_ENCRYPTING) {
         //log.trace('*** Encrypting packet');
-        data = misc.RC4Crypt(data, data.length, client.crypt.sKey);
+        data = crypt.RC4Crypt(data, data.length, client.crypt.sKey);
     }
     if (errCallback == undefined) { errCallback = writeError; }
     client.write(data, errCallback);
