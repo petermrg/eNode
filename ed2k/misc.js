@@ -29,7 +29,7 @@ var extensions = {
         'jps,mng,xbm,xcf,pcx'
         .split(','),
     pro:
-        '7z,ace,arc,arj,bzip2,cab,gzip,rar,tar,zip,iso,nrg,img,adf,dmg,cue,bin,cif,ccd,sub,raw'+
+        '7z,ace,arc,arj,bzip2,cab,gzip,rar,tar,zip,iso,nrg,img,adf,dmg,cue,bin,cif,ccd,sub,raw'
         .split(','),
 };
 
