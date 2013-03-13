@@ -5,6 +5,7 @@ global.CS_NONE          = 0;
 global.CS_UNKNOWN       = 1;
 global.CS_NEGOTIATING   = 4;
 global.CS_ENCRYPTING    = 5;
+
 // Encryption Methods
 global.EM_OBFUSCATE     = 0;
 global.EM_PREFERRED     = EM_OBFUSCATE;
@@ -27,9 +28,10 @@ global.CRYPT_PRIME = new Buffer([
 /**
  * @description Creates a RC4 key
  * @param {Buffer} buffer Keyphrase
+ * @drop {Boolean} drop Set true to drop first 1024 bytes
  * @returns {Object} The key
  */
-var RC4CreateKey = function(buffer) {
+var RC4CreateKey = function(buffer, drop) {
     var key = { state: [], x: 0, y: 0 };
     var len = buffer.length;
     var index1 = 0;
@@ -44,7 +46,9 @@ var RC4CreateKey = function(buffer) {
         key.state[index2] = swap;
         index1 = (index1 + 1) % len;
     }
-    RC4Crypt(null, 1024, key); // drop first 1024 bytes
+    if (drop) {
+        RC4Crypt(null, 1024, key);
+    }
     return key;
 };
 exports.RC4CreateKey = RC4CreateKey;
@@ -75,6 +79,14 @@ var RC4Crypt = function(buffer, length, key){
 };
 exports.RC4Crypt = RC4Crypt;
 
+exports.RC4KeyCopy = function(key){
+    return {
+        x: key.x,
+        y: key.y,
+        state: key.state.slice()
+    };
+}
+
 /**
  * @description Calculates a md5 hash
  * @param {Buffer} buffer input data
@@ -102,4 +114,18 @@ exports.rand = function(n) {
  */
 exports.randBuf = function(length) {
     return new Buffer(crypto.randomBytes(length), 'binary');
+}
+
+/**
+ * @description Returns an invalid random protocol code.
+ * @returns {Integer}
+ */
+exports.randProtocol = function() {
+    var p = 0xff;
+    var i = 5;
+    while (i--) {
+        p = exports.rand(0xff);
+        if ((p != PR_ED2K) && (p != PR_EMULE) && (p != PR_ZLIB)) break;
+    }
+    return p;
 }

@@ -8,7 +8,6 @@ var Packet = require('./packet.js').Packet;
 var zlib = require('zlib');
 var misc = require('./misc.js');
 var crypt = require('./crypt.js');
-var serverInfo = require('./tcpserver.js').info;
 var eD2KClient = require('./client.js').Client;
 
 /**
@@ -58,13 +57,15 @@ var processData = function(data, client) {
     // process incoming data
     switch (client.packet.status) {
         case PS_NEW:
+            log.trace('tcpops.processData: New');
             client.packet.init(data);
             break;
         case PS_WAITING_DATA:
+            log.trace('tcpops.processData: Waiting data...');
             client.packet.append(data);
             break;
         case PS_CRYPT_NEGOTIATING:
-            log.trace('tcpops.processData: Negotiation response:');
+            log.trace('tcpops.processData: Negotiation response');
             client.crypt.process(data);
             break;
         default:
@@ -277,7 +278,7 @@ var receive = {
 var submit = function(data, client, errCallback) {
     if (client.crypt.status == CS_ENCRYPTING) {
         //log.trace('*** Encrypting packet');
-        data = crypt.RC4Crypt(data, data.length, client.crypt.sKey);
+        data = crypt.RC4Crypt(data, data.length, client.crypt.sendKey);
     }
     if (errCallback == undefined) { errCallback = writeError; }
     client.write(data, errCallback);
@@ -287,7 +288,7 @@ var send = {
 
     foundSources: function(fileHash, sources, client) {
         log.debug('FOUNDSOURCES > '+client.info.storageId);
-        //log.todo('OP_FOUNDSOURCES_OBFU: add client crypt info. See PartFile.cpp CPartFile::AddSources');
+        log.todo('OP_FOUNDSOURCES_OBFU: add client crypt info. See PartFile.cpp CPartFile::AddSources');
         var pack = [
             [TYPE_UINT8, OP_FOUNDSOURCES],
             [TYPE_HASH, fileHash],
@@ -297,7 +298,6 @@ var send = {
             pack.push([TYPE_UINT32, src.id]);
             pack.push([TYPE_UINT16, src.port]);
         });
-        //log.debug(pack);
         submit(Packet.make(PR_ED2K, pack), client);
     },
 
@@ -308,7 +308,6 @@ var send = {
             [TYPE_UINT32, files.length]
         ];
         files.forEach(function(file){
-            //console.dir(f);
             Packet.addFile(pack, file)
         });
         submit(Packet.make(PR_ED2K, pack), client);
@@ -325,7 +324,6 @@ var send = {
             pack.push([TYPE_UINT32, misc.IPv4toInt32LE(v.ip)]);
             pack.push([TYPE_UINT16, v.port]);
         });
-        //console.dir(pack);
         submit(Packet.make(PR_ED2K, pack), client);
     },
 

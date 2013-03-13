@@ -10,39 +10,7 @@ require('./buffer.js');
 var sendError = function(err) {
     if (err) { log.error(err); }
 }
-/*
--Keycreation Client <-> Server:
-    - Client A (Outgoing connection client -> server):
-        Sendkey:    Md5(<BaseKey 4><MagicValueClientServer 1><RandomKeyPartClientA 2>)  7
-    - Client B (Incomming connection):
-        Receivekey: Md5(<BaseKey 4><MagicValueServerClient 1><RandomKeyPartClientA 2>)  7
-    - Note: The first 1024 Bytes will be _NOT_ discarded for UDP keys to safe CPU time
 
-- Handshake
-    - The handshake is encrypted - except otherwise noted - by the Keys created above
-    - Padding is cucrently not used for UDP meaning that PaddingLen will be 0, using PaddingLens up
-      to 16 Bytes is acceptable however
-
-    Client A: <SemiRandomNotProtocolMarker 1[Unencrypted]><RandomKeyPart 2[Unencrypted]>
-        <MagicValue 4><PaddingLen 1><RandomBytes PaddingLen%16>
-
-- Overhead: 8 Bytes per UDP Packet
-
-- Security for Basic Obfuscation:
-- Random looking packets, very limited protection against passive eavesdropping single packets
-
-- Additional Comments:
-- For obvious reasons the UDP handshake is actually no handshake. If a different Encryption method
-  (or better a different Key) is to be used this has to be negotiated in a TCP connection
-- SemiRandomNotProtocolMarker is a Byte which has a value unequal any Protocol header byte. This is
-  a compromiss, turning in complete randomness (and nice design) but gaining a lower CPU usage.
-
-#define MAGICVALUE_UDP                      91
-#define MAGICVALUE_UDP_SYNC_CLIENT          0x395F2EC1
-#define MAGICVALUE_UDP_SYNC_SERVER          0x13EF24D5
-#define MAGICVALUE_UDP_SERVERCLIENT         0xA5
-#define MAGICVALUE_UDP_CLIENTSERVER         0x6B
-*/
 var processData = function(buffer, info, udpServer) {
     var protocol = buffer.getUInt8();
     var code = buffer.getUInt8();
@@ -136,7 +104,7 @@ var receive = {
         buffer.getTags(function(tag){
             if (tag[0] == 'searchtree') {
                 log.todo('globSearchReq3: not sure about what to do here');
-                log.trace('Got a search tree: 0x'+tag[1].toString(16));
+                log.trace('Got a search tree: value = 0x'+tag[1].toString(16));
             }
         });
         db.files.find(buffer, function(files) {
@@ -147,6 +115,14 @@ var receive = {
     },
 
 }
+
+var submit = function(data, info, udpServer) {
+    if (udpServer.crypt != false) {
+        log.trace('submit: UDP encrypt')
+        data = udpServer.crypt.encrypt(data);
+    }
+    udpServer.send(data, 0, data.length, info.port, info.address, sendError);
+};
 
 var send = {
 /*
@@ -166,8 +142,7 @@ OP_GLOBSEARCHRES
         files.forEach(function(file){
             var pack = [[TYPE_UINT8, OP_GLOBSEARCHRES]];
             Packet.addFile(pack, file);
-            var buffer = Packet.makeUDP(PR_ED2K, pack);
-            udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
+            submit(Packet.makeUDP(PR_ED2K, pack), info, udpServer);
         });
     },
 
@@ -182,8 +157,7 @@ OP_GLOBSEARCHRES
             pack.push([TYPE_UINT32, src.id]);
             pack.push([TYPE_UINT16, src.port]);
         });
-        var buffer = Packet.makeUDP(PR_ED2K, pack);
-        udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
+        submit(Packet.makeUDP(PR_ED2K, pack), info, udpServer);
     },
 
     globServStatRes: function(challenge, info, udpServer) {
@@ -200,10 +174,9 @@ OP_GLOBSEARCHRES
             [TYPE_UINT32, lowIdClients.count()+1000], // fake value, for testing
             [TYPE_UINT16, conf.udp.portObfuscated],
             [TYPE_UINT16, conf.tcp.portObfuscated],
-            [TYPE_UINT32, 0x12345678], // udp server key ???
+            [TYPE_UINT32, conf.udp.serverKey],
         ];
-        var buffer = Packet.makeUDP(PR_ED2K, pack);
-        udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
+        submit(Packet.makeUDP(PR_ED2K, pack), info, udpServer);
     },
 
     servDescResOld: function(info, udpServer) {
@@ -213,8 +186,7 @@ OP_GLOBSEARCHRES
             [TYPE_STRING, conf.name],
             [TYPE_STRING, conf.description],
         ];
-        var buffer = Packet.makeUDP(PR_ED2K, pack);
-        udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
+        submit(Packet.makeUDP(PR_ED2K, pack), info, udpServer);
     },
 
     servDescRes: function(challenge, info, udpServer) {
@@ -231,8 +203,7 @@ OP_GLOBSEARCHRES
                 [TYPE_STRING, TAG_AUXPORTSLIST, ''],
             ]],
         ];
-        var buffer = Packet.makeUDP(PR_ED2K, pack);
-        udpServer.send(buffer, 0, buffer.length, info.port, info.address, sendError);
+        submit(Packet.makeUDP(PR_ED2K, pack), info, udpServer);
     },
 
 }

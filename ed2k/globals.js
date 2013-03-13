@@ -100,6 +100,6 @@ global.FLAG_UDP_EXTGETSOURCES2 = 0x0020;
 global.FLAG_UDP_OBFUSCATION    = 0x0200;
 global.FLAG_TCP_OBFUSCATION    = 0x0400;
 
-global.ENODE_VERSIONSTR        = 'v0.02a';
-global.ENODE_VERSIONINT        = 0x00000002;
+global.ENODE_VERSIONSTR        = 'v0.03';
+global.ENODE_VERSIONINT        = 0x00000003;
 global.ENODE_NAME              = 'eNode';

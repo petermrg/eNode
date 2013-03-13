@@ -93,6 +93,7 @@ Buffer.prototype.putHash = function(hash) {
 }
 
 Buffer.prototype.get = function(len) {
+    if (len == 0) return;
     if (len == undefined) {
         var r = this.slice(this._pointer, this.length);
         this._pointer = this.length;

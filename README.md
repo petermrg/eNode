@@ -7,7 +7,7 @@ Contributions are welcome.
 ##Features:
 
 * TCP/UDP opcodes
-* TCP protocol obfuscation
+* TCP/UDP protocol obfuscation
 * Lugdunum/emule extended protocol
 * gzip compression
 * LowID Callbacks
@@ -17,7 +17,7 @@ Contributions are welcome.
 
 ##Requires:
 
-* Node.js v0.8+
+* Node.js v0.10.x
 * MySQL server
 * Node.js modules:
   * [mysql](https://github.com/felixge/node-mysql)
@@ -41,11 +41,10 @@ If you want to test the server on a local network, change emule options to allow
 
 * gzip compression on send
 * Obfuscated LowId detection
-* UDP protocol obfuscation
-* IPv6 support: [unoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
-* Better storage/indexing
-* Support for [Nat Traversal](http://en.wikipedia.org/wiki/NAT_traversal)
 * Send OP_SERVERSTATUS every 5 minutes to connected clients
+* Better storage/indexing
+* IPv6 support: [unoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
+* Support for [Nat Traversal](http://en.wikipedia.org/wiki/NAT_traversal)
 
 ##Thanks to:
 

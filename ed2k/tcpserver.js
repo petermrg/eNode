@@ -21,15 +21,16 @@ exports.run = function(enableCrypt, port, callback) {
         };
         log.info('Connect: '+client.info.ipv4);
         client.packet = new Packet(client);
-        client.crypt = enableCrypt ? (new TcpCrypt(client.packet)) : false;
 
         if (enableCrypt) {
+            client.crypt = new TcpCrypt(client.packet);
             client.on('data', function(data){
                 data = client.crypt.decrypt(data);
                 op.processData(data, client);
             });
         }
         else {
+            client.crypt = false;
             client.on('data', function(data){
                 op.processData(data, client);
             });
@@ -72,7 +73,7 @@ exports.run = function(enableCrypt, port, callback) {
 
 };
 
-var updateConfig = function() {
+(function updateConfig() {
     console.log('+--------------+');
     console.log('| '+ENODE_NAME+' '+ENODE_VERSIONSTR+' |');
     console.log('+--------------+');
@@ -92,6 +93,4 @@ var updateConfig = function() {
         (conf.IPinLogin ? FLAG_IPINLOGIN : 0);
     log.info('TCP flags: 0x'+conf.tcp.flags.toString(16)+' - '+conf.tcp.flags.toString(2));
 
-};
-exports.updateConfig = updateConfig;
-updateConfig();
+})();

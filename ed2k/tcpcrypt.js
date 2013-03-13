@@ -9,7 +9,7 @@ var MAGICVALUE_SERVER    = 203;
 var MAGICVALUE_REQUESTER = 34;
 
 var TcpCrypt = function(packet) {
-    log.trace('Loading TcpCrypt extension');
+    log.trace('TCP Crypt init');
     this.packet = packet;
     this.status = conf.supportCrypt ? CS_UNKNOWN : CS_NONE;
 }
@@ -22,12 +22,13 @@ TcpCrypt.prototype.process = function(buffer) {
             log.warn('crypt.process: Obfuscation disabled');
             break;
         case CS_UNKNOWN:
+            log.trace('TcpCrypt.process: Negotiation start');
             this.negotiate();
             this.packet.status = PS_CRYPT_NEGOTIATING;
             this.status = CS_NEGOTIATING;
             break;
         case CS_NEGOTIATING:
-            log.info('TcpCrypt.process: Negotiation response');
+            log.trace('TcpCrypt.process: Negotiation response');
             var that = this;
             this.handshake(buffer, function(err, data){
                 if (err != false) {
@@ -78,10 +79,10 @@ K(Client) == K(Server)
     buf.putBuffer(K);
 
     buf.putUInt8(MAGICVALUE_SERVER);
-    this.sKey = crypt.RC4CreateKey(crypt.md5(buf)); // create RC4 send key
+    this.sendKey = crypt.RC4CreateKey(crypt.md5(buf), true); // create RC4 send key
 
     buf[CRYPT_PRIME_SIZE] = MAGICVALUE_REQUESTER;
-    this.rKey = crypt.RC4CreateKey(crypt.md5(buf)); // create RC4 receive key
+    this.recvKey = crypt.RC4CreateKey(crypt.md5(buf), true); // create RC4 receive key
 
     var padSize = crypt.rand(16);
     var rc4Buf = new Buffer(4+1+1+1+padSize);
@@ -94,7 +95,7 @@ K(Client) == K(Server)
     rc4Buf.putBuffer(crypt.randBuf(padSize));
 
     packet.putBuffer(B);
-    packet.putBuffer(crypt.RC4Crypt(rc4Buf, rc4Buf.length, this.sKey));
+    packet.putBuffer(crypt.RC4Crypt(rc4Buf, rc4Buf.length, this.sendKey));
 
     this.packet.client.write(packet, function(err) {
         if (err) log.error('TcpCrypt.negotiate Client write failed: '+JSON.stringify(err));
@@ -110,7 +111,7 @@ K(Client) == K(Server)
  */
 TcpCrypt.prototype.handshake = function(buffer, callback) {
     if (this.status == CS_NEGOTIATING) {
-        var data = crypt.RC4Crypt(buffer, buffer.length, this.rKey);
+        var data = crypt.RC4Crypt(buffer, buffer.length, this.recvKey);
         if (data.getUInt32LE() != MAGICVALUE_SYNC) {
             callback({'message': 'Wrong MAGICVALUE_SYNC'});
             return;
@@ -129,13 +130,13 @@ TcpCrypt.prototype.handshake = function(buffer, callback) {
 };
 
 /**
- * @description Decrypt buffer if needed
+ * @description Decrypt buffer when needed
  * @param {Buffer} buffer
  * @returns {Buffer} data
  */
 TcpCrypt.prototype.decrypt = function(buffer) {
     if (this.status == CS_ENCRYPTING) {
-        return crypt.RC4Crypt(buffer, buffer.length, this.rKey);
+        return crypt.RC4Crypt(buffer, buffer.length, this.recvKey);
     }
     else {
         return buffer;

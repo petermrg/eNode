@@ -11,11 +11,11 @@ exports.config = {
     messageLowID: 'You have LowID.',
     messageLogin: 'Welcome to eNode!',
 
-    noAssert: false, // Set noAssert to true to skip validation of offset in Buffers
+    noAssert: false, // Set noAssert to true to skip offset validation in Buffers
 
     supportCrypt: true,
-    requestCrypt: true, // not implemented
-    requireCrypt: true, // not implemented
+    requestCrypt: true,
+    requireCrypt: true,
     auxiliarPort: false, // ??
     IPinLogin: false, // ??
 
@@ -34,6 +34,7 @@ exports.config = {
         portObfuscated: 5569,
         getSources: true,
         getFiles: true,
+        serverKey: 0x12345678,
     },
 
     storage: {
@@ -46,7 +47,7 @@ exports.config = {
             log: false,
             fullLog: false,
             connections: 32, // number of concurrent connections to MySQL server
-            deadlockDelay: 100, // time to wait (ms) before retry a deadlocked query
+            deadlockDelay: 100, // time to wait (ms) before retry deadlocked query
         },
     },
 

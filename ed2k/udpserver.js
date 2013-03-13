@@ -2,32 +2,41 @@ var dgram = require('dgram');
 var conf = require('../enode.config.js').config;
 var log = require('tinylogger');
 var op = require('./udpoperations.js');
+var udpCrypt = require('./udpcrypt.js').udpCrypt;
 
 exports.run = function(enableCrypt, port) {
 
     var udpServer = dgram.createSocket('udp4');
 
-    udpServer.on('message', function(data, info){
-        log.debug('UDP data. '+info.size+'bytes');
-        var buffer = new Buffer(data); // this step should be removed in later versions of node.js
-        op.processData(buffer, info, udpServer);
-    });
-
     udpServer.on('listening', function(){
-        var address = udpServer.address();
         log.ok('Listening to UDP: '+port);
-        if (enableCrypt) log.todo('UDP obfuscation');
     });
 
     udpServer.on('error', function(err){
         log.error('UDP error: '+err);
     });
 
+    if (enableCrypt) {
+        udpServer.crypt = new udpCrypt();
+        udpServer.on('message', function(data, info){
+            log.trace('UDP data: '+info.size+' bytes (encrypted port)');
+            data = udpServer.crypt.decrypt(data, info);
+            op.processData(data, info, udpServer);
+        });
+    }
+    else {
+        udpServer.crypt = false;
+        udpServer.on('message', function(data, info){
+            log.trace('UDP data: '+info.size+' bytes');
+            op.processData(data, info, udpServer);
+        });
+    }
+
     udpServer.bind(port);
 
 };
 
-function updateConfig() {
+(function updateConfig() {
     conf.udp.flags =
         FLAG_NEWTAGS +
         FLAG_UNICODE +
@@ -37,5 +46,4 @@ function updateConfig() {
         (conf.supportCrypt ? FLAG_UDP_OBFUSCATION : 0) +
         (conf.supportCrypt ? FLAG_TCP_OBFUSCATION : 0);
     log.info('UDP flags: 0x'+conf.udp.flags.toString(16)+' - '+conf.udp.flags.toString(2));
-}
-updateConfig();
+})();
