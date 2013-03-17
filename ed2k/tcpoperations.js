@@ -17,34 +17,58 @@ var eD2KClient = require('./client.js').Client;
  * @param {Integer} client.info.port Port to check
  * @param {Function} callback(isFirewalled) Callback argument is boolean. True if firewalled.
  */
-var isFirewalled = function(client, callback) {
+var isFirewalled = function(client, crypted, callback) {
     log.info('Checking if firewalled');
     var testClient = new eD2KClient();
+
     testClient.on('connected', function(){
-        log.debug('OP_HELLO > '+client.remoteAddress+':'+client.info.port);
-        testClient.send(OP_HELLO, null, function(err){
-            if (!err) return;
-            testClient.end();
-            callback(true);
-        });
+        if (crypted) {
+            log.debug('HANDSHAKE > '+client.remoteAddress);
+            testClient.handshake(client.info.hash);
+        }
+        else {
+            log.debug('OP_HELLO > '+client.remoteAddress+':'+client.info.port);
+            testClient.send(OP_HELLO, null, function(err){});
+        }
     });
+
     testClient.on('error', function(err){
         log.error(err);
         testClient.end();
         callback(true);
     });
-    testClient.on('timeout', function(){
-        log.error('Connection timeout');
-        testClient.end();
-        callback(true);
+
+    testClient.on('timeout', function(from){
+        log.trace('isFirewalled got timeout from: '+from);
+        switch (from) {
+            case 'connection':
+            case 'hello':
+                testClient.end();
+                callback(true);
+                break;
+            case 'handshake':
+                testClient.end();
+                isFirewalled(client, false, callback);
+                break;
+        }
     });
+
+    testClient.on('handshake', function(err){
+        if (err == false) {
+            testClient.end();
+            callback(false);
+        }
+        // else do nothing because we will get a handshake timeout
+    });
+
     testClient.on('opHelloAnswer', function(info){
         log.info('Received hello answer!');
         testClient.end();
         //console.dir(info);
         callback(false);
     });
-    testClient.connect(client.remoteAddress, client.info.port);
+
+    testClient.connect(client.remoteAddress, client.info.port, client.info.hash);
 };
 
 /**
@@ -57,23 +81,23 @@ var processData = function(data, client) {
     // process incoming data
     switch (client.packet.status) {
         case PS_NEW:
-            log.trace('tcpops.processData: New');
+            //log.trace('tcpops.processData: New');
             client.packet.init(data);
             break;
         case PS_WAITING_DATA:
-            log.trace('tcpops.processData: Waiting data...');
+            //log.trace('tcpops.processData: Waiting data...');
             client.packet.append(data);
             break;
         case PS_CRYPT_NEGOTIATING:
-            log.trace('tcpops.processData: Negotiation response');
+            //log.trace('tcpops.processData: Negotiation response');
             client.crypt.process(data);
             break;
         default:
-            log.error('tcpops.processData 1: unexpected Packet Status');
+            //log.error('tcpops.processData 1: unexpected Packet Status');
             console.dir(client.packet);
             return;
     }
-    // execute action: TODO a separate function
+    // execute action
     switch (client.packet.status) {
         case PS_READY:
             parse(client.packet);
@@ -189,7 +213,7 @@ var receive = {
         db.clients.isConnected(client.info, function(err, connected){
             if (err) { log.error('loginRequest: '+err); client.end(); return; }
             if (connected) { log.error('loginRequest: already connected'); client.end(); return; }
-            isFirewalled(client, function(firewalled){
+            isFirewalled(client, conf.supportCrypt, function(firewalled){
                 if (firewalled) {
                     client.info.hasLowId = true;
                     send.serverMessage(conf.messageLowID, client);
@@ -371,11 +395,11 @@ var send = {
 
     serverMessage: function(message, client) {
         log.debug('SERVERMESSAGE > '+client.info.storageId+' '+message);
-        var pack = Packet.make(PR_ED2K, [
+        var pack = [
             [TYPE_UINT8, OP_SERVERMESSAGE],
             [TYPE_STRING, message.toString()],
-        ]);
-        submit(pack, client);
+        ];
+        submit(Packet.make(PR_ED2K, pack), client);
     },
 
     callbackRequested: function(clientWithLowId, client) { // TODO TEST
@@ -391,12 +415,6 @@ var send = {
                 send.callbackFailed(client);
             }
         });
-        // clientWithLowId.write(Packet.make(PR_ED2K, pack), function(err){
-        //     if (err) {
-        //         writeError(err);
-        //         send.callbackFailed(client);
-        //     }
-        // });
     },
 
 };

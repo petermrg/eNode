@@ -1,3 +1,8 @@
+var hexDump = require('hexy').hexy;
+
+exports.hexDump = function(data) {
+    console.log(hexDump(data));
+};
 
 exports.ext = function(name) {
     return name.substring(name.lastIndexOf('.')+1, name.length).toLowerCase();

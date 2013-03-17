@@ -1,5 +1,4 @@
 var crypto = require('crypto');
-var hexDump = require('hexy').hexy;
 
 // Crypt Status
 global.CS_NONE          = 0;

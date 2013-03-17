@@ -74,9 +74,9 @@ exports.run = function(enableCrypt, port, callback) {
 };
 
 (function updateConfig() {
-    console.log('+--------------+');
+    console.log('+-------------+');
     console.log('| '+ENODE_NAME+' '+ENODE_VERSIONSTR+' |');
-    console.log('+--------------+');
+    console.log('+-------------+');
 
     conf.hash = crypt.md5(conf.address+conf.tcp.port);
     log.info('Server hash: '+conf.hash.toString('hex'));

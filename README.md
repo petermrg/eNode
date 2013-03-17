@@ -8,6 +8,7 @@ Contributions are welcome.
 
 * TCP/UDP opcodes
 * TCP/UDP protocol obfuscation
+* Obfuscated lowID detection
 * Lugdunum/emule extended protocol
 * gzip compression
 * LowID Callbacks
@@ -40,7 +41,6 @@ If you want to test the server on a local network, change emule options to allow
 ##To do:
 
 * gzip compression on send
-* Obfuscated LowId detection
 * Send OP_SERVERSTATUS every 5 minutes to connected clients
 * Better storage/indexing
 * IPv6 support: [unoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
