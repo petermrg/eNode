@@ -1,4 +1,5 @@
 var crypto = require('crypto');
+var hexDump = require('hexy').hexy;
 
 // Crypt Status
 global.CS_NONE          = 0;
@@ -32,7 +33,7 @@ global.CRYPT_PRIME = new Buffer([
  * @returns {Object} The key
  */
 var RC4CreateKey = function(buffer, drop) {
-    var key = { state: [], x: 0, y: 0 };
+    var key = { state: new Buffer(256), x: 0, y: 0 };
     var len = buffer.length;
     var index1 = 0;
     var index2 = 0;
@@ -46,7 +47,7 @@ var RC4CreateKey = function(buffer, drop) {
         key.state[index2] = swap;
         index1 = (index1 + 1) % len;
     }
-    if (drop) {
+    if (drop == true) {
         RC4Crypt(null, 1024, key);
     }
     return key;
@@ -54,7 +55,7 @@ var RC4CreateKey = function(buffer, drop) {
 exports.RC4CreateKey = RC4CreateKey;
 
 /**
- * @description Encrypt/Decrypt using RC4 algorithm
+ * @description Encrypt/Decrypt using RC4 algorithm. Key gets updated after operation.
  * @param {Buffer} buffer Data to encode or decode
  * @param {Integer} length Data size in bytes
  * @param {Object} key The RC4 key created with RC4CreateKey
