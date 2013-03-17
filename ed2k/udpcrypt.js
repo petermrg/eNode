@@ -41,8 +41,8 @@ var MAGICVALUE_UDP_CLIENTSERVER = 0x6B;
 var MAGICVALUE_UDP_SYNC_CLIENT  = 0x395F2EC1;
 var MAGICVALUE_UDP_SYNC_SERVER  = 0x13EF24D5;
 
-var recvKeys = new Buffer(0xffffff);
 var sendKeys = new Buffer(0xffffff);
+var recvKeys = new Buffer(0xffffff);
 
 (function() { // Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
     log.info('UDP crypt keys init. Server key: '+
@@ -59,6 +59,14 @@ var sendKeys = new Buffer(0xffffff);
         recvKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(recvBuf), false).state);
     }
 })();
+
+
+var getKey = function(pool, index) {
+    var buf = new Buffer(256);
+    var start = index<<8;
+    pool.copy(buf, 0, start, start+256);
+    return { x: 0, y: 0, state: buf };
+};
 
 /**
  * @class Crypt for UDP
@@ -84,8 +92,7 @@ udpCrypt.prototype.decrypt = function(buffer, info) {
                 log.trace('udpCrypt: decrypting data from '+info.address);
                 var clientKey = buffer.getUInt16LE();
                 var b = buffer.get();
-                var RC4Key = { x: 0, y: 0, state: recvKeys.pos(clientKey).get(256) };
-                b = crypt.RC4Crypt(b, b.length, RC4Key);
+                b = crypt.RC4Crypt(b, b.length, getKey(recvKeys, clientKey));
                 if (b.getUInt32LE() == MAGICVALUE_UDP_SYNC_SERVER) {
                     var padLength = b.getUInt8();
                     b.get(padLength); // Skip padding
@@ -113,8 +120,7 @@ udpCrypt.prototype.encrypt = function(buffer) {
     // crypted part
     var enc = new Buffer(buffer.length + 5);
     enc.putUInt32LE(MAGICVALUE_UDP_SYNC_SERVER).putUInt8(0).putBuffer(buffer);
-    var RC4Key = { x: 0, y: 0, state: sendKeys.pos(clientKey).get(256) };
-    enc = crypt.RC4Crypt(enc, enc.length, sendKeys[RC4Key]);
+    enc = crypt.RC4Crypt(enc, enc.length, getKey(sendKeys, randomKey));
     // return buffer
     var ret = new Buffer(buffer.length + 8);
     return ret.putUInt8(crypt.randProtocol()).putUInt16LE(randomKey).putBuffer(enc);
