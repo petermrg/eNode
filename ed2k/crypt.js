@@ -80,13 +80,13 @@ var RC4Crypt = function(buffer, length, key){
 };
 exports.RC4Crypt = RC4Crypt;
 
-exports.RC4KeyCopy = function(key){
-    return {
-        x: key.x,
-        y: key.y,
-        state: key.state.slice()
-    };
-}
+// exports.RC4KeyCopy = function(key){
+//     return {
+//         x: key.x,
+//         y: key.y,
+//         state: key.state.slice()
+//     };
+// }
 
 /**
  * @description Calculates a md5 hash

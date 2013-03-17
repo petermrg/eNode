@@ -84,8 +84,8 @@ udpCrypt.prototype.decrypt = function(buffer, info) {
                 log.trace('udpCrypt: decrypting data from '+info.address);
                 var clientKey = buffer.getUInt16LE();
                 var b = buffer.get();
-                var key = crypt.RC4KeyCopy(recvKeys[clientKey]); // use a fresh key
-                b = crypt.RC4Crypt(b, b.length, key);
+                var RC4Key = { x: 0, y: 0, state: recvKeys.pos(clientKey).get(256) };
+                b = crypt.RC4Crypt(b, b.length, RC4Key);
                 if (b.getUInt32LE() == MAGICVALUE_UDP_SYNC_SERVER) {
                     var padLength = b.getUInt8();
                     b.get(padLength); // Skip padding
@@ -113,7 +113,8 @@ udpCrypt.prototype.encrypt = function(buffer) {
     // crypted part
     var enc = new Buffer(buffer.length + 5);
     enc.putUInt32LE(MAGICVALUE_UDP_SYNC_SERVER).putUInt8(0).putBuffer(buffer);
-    enc = crypt.RC4Crypt(enc, enc.length, sendKeys[randomKey]);
+    var RC4Key = { x: 0, y: 0, state: sendKeys.pos(clientKey).get(256) };
+    enc = crypt.RC4Crypt(enc, enc.length, sendKeys[RC4Key]);
     // return buffer
     var ret = new Buffer(buffer.length + 8);
     return ret.putUInt8(crypt.randProtocol()).putUInt16LE(randomKey).putBuffer(enc);
