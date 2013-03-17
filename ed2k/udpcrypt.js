@@ -41,11 +41,10 @@ var MAGICVALUE_UDP_CLIENTSERVER = 0x6B;
 var MAGICVALUE_UDP_SYNC_CLIENT  = 0x395F2EC1;
 var MAGICVALUE_UDP_SYNC_SERVER  = 0x13EF24D5;
 
-// TODO: The keys could be stored outside the heap (in a buffer).
-var recvKeys = [];
-var sendKeys = [];
+var recvKeys = new Buffer(0xffffff);
+var sendKeys = new Buffer(0xffffff);
 
-(function() { // Precalculate all possible keys (2*64k different keys).
+(function() { // Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
     log.info('UDP crypt keys init. Server key: '+
         conf.udp.serverKey+' (0x'+conf.udp.serverKey.toString(16)+')');
     log.info('UDP crypt keys init');
@@ -56,8 +55,8 @@ var sendKeys = [];
     for (var i=0; i<0x10000; i++) {
         sendBuf.pos(5).putUInt16LE(i);
         recvBuf.pos(5).putUInt16LE(i);
-        sendKeys[i] = crypt.RC4CreateKey(crypt.md5(sendBuf), false);
-        recvKeys[i] = crypt.RC4CreateKey(crypt.md5(recvBuf), false);
+        sendKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(sendBuf), false).state);
+        recvKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(recvBuf), false).state);
     }
 })();
 
@@ -85,7 +84,8 @@ udpCrypt.prototype.decrypt = function(buffer, info) {
                 log.trace('udpCrypt: decrypting data from '+info.address);
                 var clientKey = buffer.getUInt16LE();
                 var b = buffer.get();
-                b = crypt.RC4Crypt(b, b.length, crypt.RC4KeyCopy(recvKeys[clientKey]));
+                var key = crypt.RC4KeyCopy(recvKeys[clientKey]); // use a fresh key
+                b = crypt.RC4Crypt(b, b.length, key);
                 if (b.getUInt32LE() == MAGICVALUE_UDP_SYNC_SERVER) {
                     var padLength = b.getUInt8();
                     b.get(padLength); // Skip padding
