@@ -49,8 +49,17 @@ exports.getFileType = function(name) {
   return ''
 }
 
-exports.isProtocol = funciton(protocol) {
-  return (protocol != PR_ED2K) && (protocol != PR_EMULE) && (protocol != PR_ZLIB)
+exports.isProtocol = function(protocol) {
+  return
+    (protocol == PR_ED2K) ||
+    (protocol == PR_EMULE) ||
+    (protocol == PR_ZLIB)
 }
 
-
+exports.box = function(text) {
+  var l = text.length + 2
+  var s = ''
+  while (l--) s+= '-'
+  s = '+'+s+'+'
+  return s+'\n'+'| '+text+' |'+'\n'+s
+}

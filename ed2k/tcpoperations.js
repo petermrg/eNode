@@ -21,24 +21,24 @@ var isFirewalled = function(client, crypted, callback) {
   log.info('Checking if firewalled')
   var testClient = new eD2KClient()
 
-  testClient.on('connected', function(){
+  testClient.on('connected', function() {
     if (crypted) {
       log.debug('HANDSHAKE > '+client.remoteAddress)
       testClient.handshake(client.info.hash)
     }
     else {
       log.debug('OP_HELLO > '+client.remoteAddress+':'+client.info.port)
-      testClient.send(OP_HELLO, null, function(err){})
+      testClient.send(OP_HELLO, null, function(err) {})
     }
   })
 
-  testClient.on('error', function(err){
+  testClient.on('error', function(err) {
     log.error(err)
     testClient.end()
     callback(true)
   })
 
-  testClient.on('timeout', function(from){
+  testClient.on('timeout', function(from) {
     log.trace('isFirewalled got timeout from: '+from)
     switch (from) {
       case 'connection':
@@ -53,7 +53,7 @@ var isFirewalled = function(client, crypted, callback) {
     }
   })
 
-  testClient.on('handshake', function(err){
+  testClient.on('handshake', function(err) {
     if (err == false) {
       testClient.end()
       callback(false)
@@ -61,7 +61,7 @@ var isFirewalled = function(client, crypted, callback) {
     // else do nothing because we will get a handshake timeout
   })
 
-  testClient.on('opHelloAnswer', function(info){
+  testClient.on('opHelloAnswer', function(info) {
     log.info('Received hello answer!')
     testClient.end()
     //console.dir(info)
@@ -171,13 +171,25 @@ var writeError = function(err) {
 var ed2k = function(client) {
   client.packet.data.pos(0)
   switch (client.packet.code) {
-    case OP_LOGINREQUEST: receive.loginRequest(client) break
-    case OP_OFFERFILES: receive.offerFiles(client) break
-    case OP_GETSERVERLIST: receive.getServerList(client) break
+    case OP_LOGINREQUEST:
+      receive.loginRequest(client)
+      break
+    case OP_OFFERFILES:
+      receive.offerFiles(client)
+      break
+    case OP_GETSERVERLIST:
+      receive.getServerList(client)
+      break
     case OP_GETSOURCES_OBFU:
-    case OP_GETSOURCES: receive.getSources(client) break
-    case OP_SEARCHREQUEST: receive.searchRequest(client) break
-    case OP_CALLBACKREQUEST: receive.callbackRequest(client) break
+    case OP_GETSOURCES:
+      receive.getSources(client)
+      break
+    case OP_SEARCHREQUEST:
+      receive.searchRequest(client)
+      break
+    case OP_CALLBACKREQUEST:
+      receive.callbackRequest(client)
+      break
     default:
       log.warn('ed2k: Unhandled opcode: 0x'+client.packet.code.toString(16))
 
@@ -187,7 +199,7 @@ var ed2k = function(client) {
 var receive = {
 
   handShake: function(client) {
-    db.clients.connect(client.info, function(err, storageId){
+    db.clients.connect(client.info, function(err, storageId) {
       if (!err) {
         client.info.logged = true
         log.info('Storage ID: '+storageId)
@@ -214,10 +226,18 @@ var receive = {
     client.info.id = data.getUInt32LE()
     client.info.port = data.getUInt16LE()
     client.info.tags = data.getTags()
-    db.clients.isConnected(client.info, function(err, connected){
-      if (err) { log.error('loginRequest: '+err) client.end() return }
-      if (connected) { log.error('loginRequest: already connected') client.end() return }
-      isFirewalled(client, conf.supportCrypt, function(firewalled){
+    db.clients.isConnected(client.info, function(err, connected) {
+      if (err) {
+        log.error('loginRequest: '+err)
+        client.end()
+        return
+      }
+      if (connected) {
+        log.error('loginRequest: already connected')
+        client.end()
+        return
+      }
+      isFirewalled(client, conf.supportCrypt, function(firewalled) {
         if (firewalled) {
           client.info.hasLowId = true
           send.serverMessage(conf.messageLowID, client)
@@ -241,7 +261,7 @@ var receive = {
 
   offerFiles: function(client) {
     log.debug('OFFERFILES < '+client.info.storageId)
-    var count = client.packet.data.getFileList(function(file){
+    var count = client.packet.data.getFileList(function(file) {
       //log.trace(file.name+' '+file.size+' '+file.hash.toString('hex'))
       db.files.add(file, client.info)
     })
@@ -266,7 +286,7 @@ var receive = {
       file.size = client.packet.data.getUInt32LE()
       file.size+= client.packet.data.getUInt32LE() * 0x100000000
     }
-    db.files.getSources(file.hash, file.size, function(fileHash, sources){
+    db.files.getSources(file.hash, file.size, function(fileHash, sources) {
       log.trace('Got '+sources.length+' sources for file: '+fileHash.toString('hex'))
       send.foundSources(fileHash, sources, client)
     })
@@ -275,7 +295,7 @@ var receive = {
   searchRequest: function(client) {
     log.info('SEARCHREQUEST < '+client.info.storageId)
     //log.text(hexDump(client.packet.data))
-    db.files.find(client.packet.data, function(files){
+    db.files.find(client.packet.data, function(files) {
       send.searchResult(files, client)
     })
   },
@@ -322,7 +342,7 @@ var send = {
       [TYPE_HASH, fileHash],
       [TYPE_UINT8, sources.length]
     ]
-    sources.forEach(function(src){
+    sources.forEach(function(src) {
       pack.push([TYPE_UINT32, src.id])
       pack.push([TYPE_UINT16, src.port])
     })
@@ -335,7 +355,7 @@ var send = {
       [TYPE_UINT8, OP_SEARCHRESULT],
       [TYPE_UINT32, files.length]
     ]
-    files.forEach(function(file){
+    files.forEach(function(file) {
       Packet.addFile(pack, file)
     })
     submit(Packet.make(PR_ED2K, pack), client)
@@ -347,7 +367,7 @@ var send = {
       [TYPE_UINT8, OP_SERVERLIST],
       [TYPE_UINT8, db.servers.count()],
     ]
-    db.servers.all().forEach(function(v){
+    db.servers.all().forEach(function(v) {
       log.trace(v.ip+':'+v.port)
       pack.push([TYPE_UINT32, misc.IPv4toInt32LE(v.ip)])
       pack.push([TYPE_UINT16, v.port])
@@ -413,7 +433,7 @@ var send = {
       [TYPE_UINT32, client.info.ipv4],
       [TYPE_UINT16, client.info.port],
     ]
-    submit(Packet.make(PR_ED2K, pack), clientWithLowId, function(err){
+    submit(Packet.make(PR_ED2K, pack), clientWithLowId, function(err) {
       if (err) {
         writeError(err)
         send.callbackFailed(client)

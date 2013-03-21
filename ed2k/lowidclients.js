@@ -30,7 +30,7 @@ var lowIdClients = {
 
   add: function(client) {
     var id = lowIdClients._nextId();
-    if (id != false) { lowIdClients._clients[id] = client; }
+    if (id) { lowIdClients._clients[id] = client; }
     return id;
   },
 

@@ -74,10 +74,8 @@ exports.run = function(enableCrypt, port, callback) {
 
 }
 
-(function updateConfig() {
-  console.log('+-------------+')
-  console.log('| '+ENODE_NAME+' '+ENODE_VERSIONSTR+' |')
-  console.log('+-------------+')
+;(function updateConfig() {
+  console.log(misc.box(ENODE_NAME+' '+ENODE_VERSIONSTR))
 
   conf.hash = crypt.md5(conf.address+conf.tcp.port)
   log.info('Server hash: '+conf.hash.toString('hex'))
@@ -94,4 +92,5 @@ exports.run = function(enableCrypt, port, callback) {
     (conf.IPinLogin ? FLAG_IPINLOGIN : 0)
   log.info('TCP flags: 0x'+conf.tcp.flags.toString(16)+' - '+
     conf.tcp.flags.toString(2))
+
 })()

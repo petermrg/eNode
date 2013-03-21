@@ -12,10 +12,10 @@ var MAGICVALUE_UDP_SYNC_SERVER  = 0x13EF24D5
 var sendKeys = new Buffer(0xffffff)
 var recvKeys = new Buffer(0xffffff)
 
-(function() { // Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
-  log.info('UDP crypt keys init. Server key: '+
-    conf.udp.serverKey+' (0x'+conf.udp.serverKey.toString(16)+')')
-  log.info('UDP crypt keys init')
+// Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
+;(function() {
+  log.info('UDP Server key: 0x'+conf.udp.serverKey.toString(16))
+  log.info('UDP crypt keys init...')
   var sendBuf = new Buffer(7)
   var recvBuf = new Buffer(7)
   sendBuf.putUInt32LE(conf.udp.serverKey).putUInt8(MAGICVALUE_UDP_SERVERCLIENT)
@@ -28,11 +28,16 @@ var recvKeys = new Buffer(0xffffff)
   }
 })()
 
-
-var getKey = function(pool, index) {
-  var buf = new Buffer(256),
-    start = index<<8
-  pool.copy(buf, 0, start, start+256)
+/**
+ * Gets an RC4Key from the Keys Buffer
+ *
+ * @param {Integer} index Position of the key in the buffer
+ * @returns {Object} RC4 Key object
+ */
+var getKey = function(keysBuffer, index) {
+  var buf = new Buffer(256)
+  var start = index<<8
+  keysBuffer.copy(buf, 0, start, start+256)
   return { x: 0, y: 0, state: buf }
 }
 
@@ -88,9 +93,9 @@ udpCrypt.prototype.decrypt = function(buffer, info) {
  * @return {Buffer} Encrypted data
  */
 udpCrypt.prototype.encrypt = function(buffer) {
-  var randomKey = crypt.rand(0xffff),
-    enc = new Buffer(buffer.length + 5),
-    ret = new Buffer(buffer.length + 8)
+  var randomKey = crypt.rand(0xffff)
+  var enc = new Buffer(buffer.length + 5)
+  var ret = new Buffer(buffer.length + 8)
 
   // crypted part
   enc.putUInt32LE(MAGICVALUE_UDP_SYNC_SERVER)

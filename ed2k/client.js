@@ -1,13 +1,13 @@
-var net = require('net'),
-    conf = require('../enode.config.js').config,
-    Packet = require('./packet.js').Packet,
-    misc = require('./misc.js'),
-    log = require('tinylogger'),
-    crypt = require('./crypt.js')
+var net = require('net')
+var conf = require('../enode.config.js').config
+var Packet = require('./packet.js').Packet
+var misc = require('./misc.js')
+var log = require('tinylogger')
+var crypt = require('./crypt.js')
 
-var MAGICVALUE_SYNC = 0x835E6FC4,
-    MAGICVALUE_203  = 203,
-    MAGICVALUE_34   = 34
+var MAGICVALUE_SYNC = 0x835E6FC4
+var MAGICVALUE_203  = 203
+var MAGICVALUE_34   = 34
 
 /**
  * Very basic eD2K client for sending/receiving HELLO packets.
@@ -122,11 +122,13 @@ Client.prototype.connect = function(host, port, hash) {
           clearTimeout(t.opHelloTimeout)
           _this._opHello(readOpHelloAnswer(d))
           break
-        default: log.warn('eD2K CLient: Unhandled opcode: 0x'+opcode.toString(16))
+        default:
+          log.warn('eD2K CLient: Unhandled opcode: 0x'+opcode.toString(16))
       }
     }
     else {
-      log.error('eD2K Client: incoming data: bad protocol: 0x'+protocol.toString(16))
+      log.error('eD2K Client: incoming data: bad protocol: 0x'+
+        protocol.toString(16))
     }
   })
 
@@ -138,7 +140,8 @@ Client.prototype.connect = function(host, port, hash) {
     _this._timeout('connection')
   })
 
-  this.socket.connect({port: port, host: host, localAddress: conf.address }, function() {
+  this.socket.connect({port: port, host: host, localAddress: conf.address },
+    function() {
     _this._connected()
   })
 
