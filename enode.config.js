@@ -47,7 +47,7 @@ exports.config = {
       pass: 'password',
       log: false,
       fullLog: false,
-      connections: 32, // number of concurrent connections to MySQL server
+      connections: 8, // number of concurrent connections to MySQL server
       deadlockDelay: 100, // time to wait (ms) before retry deadlocked query
     },
 
