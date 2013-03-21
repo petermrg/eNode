@@ -26,19 +26,20 @@ global.CRYPT_PRIME = new Buffer([
 ]);
 
 /**
- * @description Creates a RC4 key
+ * Creates a RC4 key
+ *
  * @param {Buffer} buffer Keyphrase
  * @drop {Boolean} drop Set true to drop first 1024 bytes
  * @returns {Object} The key
  */
 var RC4CreateKey = function(buffer, drop) {
-    var key = { state: new Buffer(256), x: 0, y: 0 };
-    var len = buffer.length;
-    var index1 = 0;
-    var index2 = 0;
-    var swap = 0;
-    var i = 0;
-    for (i=0; i<256; i++) { key.state[i] = i; }
+    var key = { state: new Buffer(256), x: 0, y: 0 },
+        len = buffer.length,
+        index1 = 0,
+        index2 = 0,
+        swap = 0,
+        i = 0;
+    for (i=0; i<256; i++) key.state[i] = i;
     for (i=0; i<256; i++) {
         index2 = (buffer[index1] + key.state[i] + index2) % 256;
         swap = key.state[i];
@@ -46,26 +47,25 @@ var RC4CreateKey = function(buffer, drop) {
         key.state[index2] = swap;
         index1 = (index1 + 1) % len;
     }
-    if (drop == true) {
-        RC4Crypt(null, 1024, key);
-    }
+    if (drop) RC4Crypt(null, 1024, key);
     return key;
 };
 exports.RC4CreateKey = RC4CreateKey;
 
 /**
- * @description Encrypt/Decrypt using RC4 algorithm. Key gets updated after operation.
+ * Encrypt/Decrypt using RC4 algorithm. Key gets updated after operation.
+ *
  * @param {Buffer} buffer Data to encode or decode
  * @param {Integer} length Data size in bytes
  * @param {Object} key The RC4 key created with RC4CreateKey
  * @returns {Buffer} Output data buffer
  */
 var RC4Crypt = function(buffer, length, key){
-    if (key == null) return;
-    var swap = 0;
-    var xorIndex = 0;
-    if (buffer != null) { var output = new Buffer(length); }
-    else { output = null; }
+    if (!key) return;
+    var swap = 0,
+        xorIndex = 0,
+        output = null;
+    if (buffer) output = new Buffer(length);
     for (var i=0; i<length; i++) {
         key.x = (key.x + 1) % 256;
         key.y = (key.state[key.x] + key.y) % 256;
@@ -73,22 +73,15 @@ var RC4Crypt = function(buffer, length, key){
         key.state[key.x] = key.state[key.y];
         key.state[key.y] = swap;
         xorIndex = (key.state[key.x] + key.state[key.y]) % 256;
-        if (buffer != null) { output[i] = (buffer[i] ^ key.state[xorIndex]) % 256; }
+        if (buffer) output[i] = (buffer[i] ^ key.state[xorIndex]) % 256;
     }
     return output;
 };
 exports.RC4Crypt = RC4Crypt;
 
-// exports.RC4KeyCopy = function(key){
-//     return {
-//         x: key.x,
-//         y: key.y,
-//         state: key.state.slice()
-//     };
-// }
-
 /**
- * @description Calculates a md5 hash
+ * Calculates a md5 hash
+ *
  * @param {Buffer} buffer input data
  * @returns {Buffer} Output data
  */
@@ -99,7 +92,8 @@ exports.md5 = function(buffer) {
 }
 
 /**
- * @description Returns random value between 0 and n (both included)
+ * Returns random value between 0 and n (both included)
+ *
  * @param {Integer} n
  * @returns {Integer} pseudo-random number (0..n)
  */
@@ -108,7 +102,8 @@ exports.rand = function(n) {
 }
 
 /**
- * @description Returns a buffer filled with random data
+ * Returns a buffer filled with random data
+ *
  * @param {Integer} length of the returned buffer
  * @returns {Buffer} random data
  */
@@ -117,12 +112,13 @@ exports.randBuf = function(length) {
 }
 
 /**
- * @description Returns an invalid random protocol code.
+ * Returns an invalid random protocol code.
+ *
  * @returns {Integer}
  */
 exports.randProtocol = function() {
-    var p = 0xff;
-    var i = 5;
+    var p = 0xff,
+        i = 5;
     while (i--) {
         p = exports.rand(0xff);
         if ((p != PR_ED2K) && (p != PR_EMULE) && (p != PR_ZLIB)) break;

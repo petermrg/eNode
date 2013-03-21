@@ -1,17 +1,17 @@
-var conf = require('../enode.config.js').config;
-var log = require('tinylogger');
-var db = require('../storage/storage.js');
-var net = require('net');
-var hexDump = require('hexy').hexy;
-var lowIdClients = require('./lowidclients.js').lowIdClients;
-var Packet = require('./packet.js').Packet;
-var zlib = require('zlib');
-var misc = require('./misc.js');
-var crypt = require('./crypt.js');
-var eD2KClient = require('./client.js').Client;
+var conf = require('../enode.config.js').config,
+    log = require('tinylogger'),
+    db = require('../storage/storage.js'),
+    net = require('net'),
+    lowIdClients = require('./lowidclients.js').lowIdClients,
+    Packet = require('./packet.js').Packet,
+    zlib = require('zlib'),
+    misc = require('./misc.js'),
+    crypt = require('./crypt.js'),
+    eD2KClient = require('./client.js').Client;
 
 /**
- * @description Checks if a client is firewalled
+ * Checks if a client is firewalled
+ *
  * @param {Socket} client
  * @param {Object} client.info Client information
  * @param {Integer} client.info.port Port to check
@@ -72,7 +72,8 @@ var isFirewalled = function(client, crypted, callback) {
 };
 
 /**
- * @description Processes incoming TCP data
+ * Processes incoming TCP data
+ *
  * @param {Buffer} data Incoming data
  * @param {Socket} client The client who sends the data
  * @param {Packet} client.packet Packet object from client
@@ -108,7 +109,8 @@ var processData = function(data, client) {
 exports.processData = processData;
 
 /**
- * @description Parses a clients packet and depending on it's header takes action
+ * Parses a clients packet and depending on it's header takes action
+ *
  * @param {Socket} client
  * @param {Packet} client.packet Packet object from client
  */
@@ -136,7 +138,7 @@ var parse = function(packet) {
             break;
         default:
             log.warn('TCP: Unknown protocol: 0x'+packet.protocol.toString(16));
-            console.log(hexDump(buffer));
+            misc.hexDump(buffer);
             // if (this.packet.crypt.status == CS_NONE) {
             //     log.warn('Encription is disabled!');
             // }
@@ -152,7 +154,8 @@ var parse = function(packet) {
 };
 
 /**
- * @description Error handler for socket.write operations
+ * Error handler for socket.write operations
+ *
  * @param err Information about the error or false if there isn't.
  */
 var writeError = function(err) {
@@ -160,7 +163,8 @@ var writeError = function(err) {
 };
 
 /**
- * @description Executes an eD2K operation
+ * Executes an eD2K operation
+ *
  * @param {net.Socket} client
  * @param {Packet} client.packet
  */
@@ -402,7 +406,7 @@ var send = {
         submit(Packet.make(PR_ED2K, pack), client);
     },
 
-    callbackRequested: function(clientWithLowId, client) { // TODO TEST
+    callbackRequested: function(clientWithLowId, client) { // TODO: TEST
         log.info('CALLBACKREQUESTED > '+clientWithLowId.info.id);
         var pack = [
             [TYPE_UINT8, OP_CALLBACKREQUESTED],

@@ -1,8 +1,8 @@
-var log = require('tinylogger');
-var crypt = require('./crypt.js');
-var misc = require('./misc.js');
-var conf = require('../enode.config.js').config;
-var hexDump = require('hexy').hexy;
+var log = require('tinylogger'),
+    crypt = require('./crypt.js'),
+    misc = require('./misc.js'),
+    conf = require('../enode.config.js').config;
+
 require('./buffer.js');
 
 /*
@@ -36,13 +36,12 @@ require('./buffer.js');
 
 */
 
-var MAGICVALUE_UDP_SERVERCLIENT = 0xA5;
-var MAGICVALUE_UDP_CLIENTSERVER = 0x6B;
-var MAGICVALUE_UDP_SYNC_CLIENT  = 0x395F2EC1;
-var MAGICVALUE_UDP_SYNC_SERVER  = 0x13EF24D5;
-
-var sendKeys = new Buffer(0xffffff);
-var recvKeys = new Buffer(0xffffff);
+var MAGICVALUE_UDP_SERVERCLIENT = 0xA5,
+    MAGICVALUE_UDP_CLIENTSERVER = 0x6B,
+    MAGICVALUE_UDP_SYNC_CLIENT  = 0x395F2EC1,
+    MAGICVALUE_UDP_SYNC_SERVER  = 0x13EF24D5,
+    sendKeys = new Buffer(0xffffff),
+    recvKeys = new Buffer(0xffffff);
 
 (function() { // Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
     log.info('UDP crypt keys init. Server key: '+
@@ -62,13 +61,15 @@ var recvKeys = new Buffer(0xffffff);
 
 
 var getKey = function(pool, index) {
-    var buf = new Buffer(256);
-    var start = index<<8;
+    var buf = new Buffer(256),
+        start = index<<8;
     pool.copy(buf, 0, start, start+256);
     return { x: 0, y: 0, state: buf };
 };
 
 /**
+ * Crypt class for UDP
+ *
  * @class Crypt for UDP
  * @constructor
  * @property {Integer} status
@@ -78,7 +79,8 @@ var udpCrypt = function() {
 };
 
 /**
- * @description Decrypt buffer when needed
+ * Decrypt buffer when needed
+ *
  * @param {Buffer} buffer Input data
  * @param {Buffer} info Input data
  * @returns {Buffer} Decrypted data
@@ -111,19 +113,26 @@ udpCrypt.prototype.decrypt = function(buffer, info) {
 };
 
 /**
- * @description Encrypts an UDP packet
+ * Encrypts an UDP packet
+ *
  * @param {Buffer} buffer Input data
  * @return {Buffer} Encrypted data
  */
 udpCrypt.prototype.encrypt = function(buffer) {
-    var randomKey = crypt.rand(0xffff);
+    var randomKey = crypt.rand(0xffff),
+        enc = new Buffer(buffer.length + 5),
+        ret = new Buffer(buffer.length + 8);
+
     // crypted part
-    var enc = new Buffer(buffer.length + 5);
-    enc.putUInt32LE(MAGICVALUE_UDP_SYNC_SERVER).putUInt8(0).putBuffer(buffer);
+    enc.putUInt32LE(MAGICVALUE_UDP_SYNC_SERVER)
+      .putUInt8(0)
+      .putBuffer(buffer);
     enc = crypt.RC4Crypt(enc, enc.length, getKey(sendKeys, randomKey));
+
     // return buffer
-    var ret = new Buffer(buffer.length + 8);
-    return ret.putUInt8(crypt.randProtocol()).putUInt16LE(randomKey).putBuffer(enc);
+    return ret.putUInt8(crypt.randProtocol())
+      .putUInt16LE(randomKey)
+      .putBuffer(enc);
 }
 
 exports.udpCrypt = udpCrypt;

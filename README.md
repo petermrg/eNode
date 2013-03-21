@@ -19,13 +19,17 @@ Contributions are welcome.
 ##Requires:
 
 * Node.js v0.10.x
-* MySQL server
+* MySQL server / MongoDB
 * Node.js modules:
-  * [mysql](https://github.com/felixge/node-mysql)
-  * [bigint](https://github.com/substack/node-bigint)
-  * [hexy](https://github.com/a2800276/hexy.js): to do hexdumps, useful for debugging packets
+  * [bignum](https://github.com/justmoon/node-bignum): required for protocol obfuscation
+  * [hexy](https://github.com/a2800276/hexy.js): hexdumps, useful for debugging packets
   * [tinylogger](https://github.com/petermrg/tinylogger): to show messages in console
-    * [colors](https://github.com/Marak/colors.js): used in tinylogger
+    * [colors](https://github.com/Marak/colors.js): required by tinylogger
+
+##Supported storage engines:
+
+  * [mysql](https://github.com/felixge/node-mysql)
+  * [mongodb](https://github.com/mongodb/node-mongodb-native)
 
 ##Usage:
 
