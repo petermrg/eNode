@@ -5,9 +5,9 @@ var misc = require('./misc.js')
 var crypt = require('./crypt.js')
 var Packet = require('./packet.js').Packet
 var TcpCrypt = require('./tcpcrypt.js').TcpCrypt
-  var conf = require('../enode.config.js').config
-  var lowIdClients = require('./lowidclients.js').lowIdClients
-  var op = require('./tcpoperations.js')
+var conf = require('../enode.config.js').config
+var lowIdClients = require('./lowidclients.js').lowIdClients
+var op = require('./tcpoperations.js')
 
 exports.run = function(enableCrypt, port, callback) {
 
@@ -94,5 +94,4 @@ exports.run = function(enableCrypt, port, callback) {
     (conf.IPinLogin ? FLAG_IPINLOGIN : 0)
   log.info('TCP flags: 0x'+conf.tcp.flags.toString(16)+' - '+
     conf.tcp.flags.toString(2))
-
 })()
