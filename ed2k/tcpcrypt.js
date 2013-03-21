@@ -1,7 +1,7 @@
 var conf = require('../enode.config.js').config,
     log = require('tinylogger'),
     hexDump = require('hexy').hexy,
-    bignum = require('bignum'),
+    bigint = require('../lib/biginteger.js'),
     crypt = require('./crypt.js'),
 
     MAGICVALUE_SYNC    = 0x835E6FC4,

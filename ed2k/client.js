@@ -10,7 +10,7 @@ var MAGICVALUE_SYNC = 0x835E6FC4,
     MAGICVALUE_34   = 34
 
 /**
- * This is a very basic eD2K client for sending/receiving HELLO packets.
+ * Very basic eD2K client for sending/receiving HELLO packets.
  */
 var Client = function() {
   this.socket = new net.Socket()
@@ -36,7 +36,8 @@ Client.prototype.handshake = function() {
     buf = new Buffer(1+4+4+1+1+1+padLength)
 
   // calculate the keys
-  _this.sendKey = crypt.md5(key.putHash(t.hash)
+  _this.sendKey = crypt.md5(key
+    .putHash(t.hash)
     .putUInt8(MAGICVALUE_34)
     .putUInt32LE(randomKey))
   _this.recvKey = crypt.md5(key
@@ -89,7 +90,7 @@ Client.prototype._decrypt = function(data) {
         return false
       }
       else {
-        r.crypt.status = CS_NONE
+        _this.crypt.status = CS_NONE
         _this._handshake({message: 'Bad handshake answer received'})
       }
       return data
@@ -146,12 +147,24 @@ Client.prototype.connect = function(host, port, hash) {
 
 Client.prototype.on = function(event, callback) {
   switch (event) {
-    case 'error': this._error = callback break
-    case 'timeout': this._timeout = callback break
-    case 'connected': this._connected = callback break
-    case 'data': this._data = callback break
-    case 'opHelloAnswer': this._opHello = callback break
-    case 'handshake': this._handshake = callback break
+    case 'error':
+      this._error = callback
+      break
+    case 'timeout':
+      this._timeout = callback
+      break
+    case 'connected':
+      this._connected = callback
+      break
+    case 'data':
+      this._data = callback
+      break
+    case 'opHelloAnswer':
+      this._opHello = callback
+      break
+    case 'handshake':
+      this._handshake = callback
+      break
   }
   return this
 }

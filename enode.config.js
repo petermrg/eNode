@@ -38,7 +38,7 @@ exports.config = {
   },
 
   storage: {
-    engine: 'mongodb',
+    engine: 'mysql',
 
     mysql: {
       database: 'enode',
