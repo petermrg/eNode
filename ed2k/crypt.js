@@ -1,4 +1,5 @@
 var crypto = require('crypto')
+var misc = require('./misc.js')
 
 // Crypt Status
 global.CS_NONE        = 0
