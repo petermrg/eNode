@@ -61,7 +61,7 @@ var isFirewalled = function(client, crypted, callback) {
     // else do nothing because we will get a handshake timeout
   })
 
-  testClient.on('opHelloAnswer', function(info) {
+  testClient.on('ophelloanswer', function(info) {
     log.info('Received hello answer!')
     testClient.end()
     //console.dir(info)
