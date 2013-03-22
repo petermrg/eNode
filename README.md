@@ -43,6 +43,7 @@ If you want to test the server on a local network, change emule options to allow
 ##To do:
 
 * gzip compression on send
+* OP_FOUNDSOURCES_OBFU
 * Send OP_SERVERSTATUS every 5 minutes to connected clients
 * Better storage/indexing
 * IPv6 support: [unoficial draft for eD2K IPv6 extension](http://piratenpad.de/p/ed2kIPv6)
