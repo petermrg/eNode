@@ -2,7 +2,7 @@ var log = require('tinylogger')
 var crypt = require('./crypt.js')
 var misc = require('./misc.js')
 var conf = require('../enode.config.js').config
-
+var fs = require('fs')
 require('./buffer.js')
 
 var MAGICVALUE_UDP_SERVERCLIENT = 0xA5
@@ -14,17 +14,34 @@ var recvKeys = new Buffer(0xffffff)
 
 // Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
 ;(function() {
-  log.info('UDP Server key: 0x'+conf.udp.serverKey.toString(16))
-  log.info('UDP crypt keys init...')
-  var sendBuf = new Buffer(7)
-  var recvBuf = new Buffer(7)
-  sendBuf.putUInt32LE(conf.udp.serverKey).putUInt8(MAGICVALUE_UDP_SERVERCLIENT)
-  recvBuf.putUInt32LE(conf.udp.serverKey).putUInt8(MAGICVALUE_UDP_CLIENTSERVER)
-  for (var i=0; i<0x10000; i++) {
-    sendBuf.pos(5).putUInt16LE(i)
-    recvBuf.pos(5).putUInt16LE(i)
-    sendKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(sendBuf), false).state)
-    recvKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(recvBuf), false).state)
+  var fn = 'udpkeys-'+conf.udp.serverKey.toString(16)+'.dat'
+  if (fs.existsSync(fn)) {
+    var fd = fs.openSync(fn, 'r')
+    fs.readSync(fd, sendKeys, 0, 0xffffff, 0)
+    fs.readSync(fd, recvKeys, 0, 0xffffff, 0x1000000)
+    fs.closeSync(fd);
+  }
+  else {
+    var fd = fs.openSync(fn, 'w')
+    log.info('UDP Server key: 0x'+conf.udp.serverKey.toString(16))
+    log.info('UDP crypt keys init...')
+    var sendKey = new Buffer(7)
+    var recvKey = new Buffer(7)
+    sendKey
+      .putUInt32LE(conf.udp.serverKey)
+      .putUInt8(MAGICVALUE_UDP_SERVERCLIENT)
+    recvKey
+      .putUInt32LE(conf.udp.serverKey)
+      .putUInt8(MAGICVALUE_UDP_CLIENTSERVER)
+    for (var i=0; i<0x10000; i++) {
+      sendKey.pos(5).putUInt16LE(i)
+      recvKey.pos(5).putUInt16LE(i)
+      sendKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(sendKey), false).state)
+      recvKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(recvKey), false).state)
+    }
+    fs.writeSync(fd, sendKeys, 0, 0xffffff, 0)
+    fs.writeSync(fd, recvKeys, 0, 0xffffff, 0x1000000)
+    fs.closeSync(fd)
   }
 })()
 
