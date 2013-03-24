@@ -21,25 +21,31 @@ exports.IPv4toInt32LE = function(IPv4) {
   return ip
 }
 
-var extensions = {
-  video:
-    '3gp,aaf,asf,avchd,avi,fla,flv,m1v,m2v,m4v,mp4,mpg,mpe,mpeg,mov,mkv,mp4,'+
-    'ogg,rm,svi'
-    .split(','),
-  audio:
-    'aiff,au,wav,flac,la,pac,m4a,ape,rka,shn,tta,wv,wma,brstm,amr,mp2,mp3,'+
-    'ogg,aac,m4a,mpc,ra,ots,vox,voc,mid,mod,s3m,xm,it,asf'
-    .split(','),
-  image:
-    'cr2,pdn,pgm,pict,bmp,png,dib,djvu,gif,psd,pdd,icns,ico,rle,tga,jpeg,jpg,'+
-    'tiff,tif,jp2,jps,mng,xbm,xcf,pcx'
-    .split(','),
-  pro:
-    '7z,ace,arc,arj,bzip2,cab,gzip,rar,tar,zip,iso,nrg,img,adf,dmg,cue,bin,'+
-    'cif,ccd,sub,raw'.split(','),
-}
-
+/**
+ * Get file type based on file extension. The file type can be one on these:
+ * 'video', 'audio', 'image', 'pro'.
+ *
+ * @param {String} name Filename
+ * @returns {String} File type
+ */
 exports.getFileType = function(name) {
+  var extensions = {
+    video:
+      '3gp,aaf,asf,avchd,avi,fla,flv,m1v,m2v,m4v,mp4,mpg,mpe,mpeg,mov,mkv,mp4,'+
+      'ogg,rm,svi'
+      .split(','),
+    audio:
+      'aiff,au,wav,flac,la,pac,m4a,ape,rka,shn,tta,wv,wma,brstm,amr,mp2,mp3,'+
+      'ogg,aac,m4a,mpc,ra,ots,vox,voc,mid,mod,s3m,xm,it,asf'
+      .split(','),
+    image:
+      'cr2,pdn,pgm,pict,bmp,png,dib,djvu,gif,psd,pdd,icns,ico,rle,tga,jpeg,'+
+      'jpg,tiff,tif,jp2,jps,mng,xbm,xcf,pcx'
+      .split(','),
+    pro:
+      '7z,ace,arc,arj,bzip2,cab,gzip,rar,tar,zip,iso,nrg,img,adf,dmg,cue,bin,'+
+      'cif,ccd,sub,raw'.split(','),
+  }
   if (!typeof name == 'string') { return '' }
   var ext = exports.ext(name)
   if (extensions.video.indexOf(ext)>=0) return 'Video'
@@ -56,10 +62,20 @@ exports.isProtocol = function(protocol) {
     (protocol == PR_ZLIB)
 }
 
+/**
+ * Draws an ASCII box around some text
+ */
 exports.box = function(text) {
   var l = text.length + 2
   var s = ''
   while (l--) s+= '-'
   s = '+'+s+'+'
   return s+'\n'+'| '+text+' |'+'\n'+s
+}
+
+/**
+ * Returns a UNIX timestamp
+ */
+exports.unixTimestamp = function() {
+  return Math.round((new Date()).getTime()/1000)
 }
