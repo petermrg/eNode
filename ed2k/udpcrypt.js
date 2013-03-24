@@ -64,7 +64,7 @@ udpCrypt.prototype.decrypt = function(buffer, info) {
 
     case CS_ENCRYPTING:
       var protocol = buffer.getUInt8()
-      if (misc.isProtocol(protocol)) {
+      if (!misc.isProtocol(protocol)) {
         log.trace('udpCrypt: decrypting data from '+info.address)
         var clientKey = buffer.getUInt16LE()
         var b = buffer.get()
