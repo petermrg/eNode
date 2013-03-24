@@ -9,16 +9,17 @@ var MAGICVALUE_UDP_SERVERCLIENT = 0xA5
 var MAGICVALUE_UDP_CLIENTSERVER = 0x6B
 var MAGICVALUE_UDP_SYNC_CLIENT  = 0x395F2EC1
 var MAGICVALUE_UDP_SYNC_SERVER  = 0x13EF24D5
-var sendKeys = new Buffer(0xffffff)
-var recvKeys = new Buffer(0xffffff)
+var keyBufferSize = 0xffffff
+var sendKeys = new Buffer(keyBufferSize)
+var recvKeys = new Buffer(keyBufferSize)
 
 // Precalculate all possible keys (2*0xffff different 256B keys = 32MB).
 ;(function() {
   var fn = 'udpkeys-'+conf.udp.serverKey.toString(16)+'.dat'
   if (fs.existsSync(fn)) {
     var fd = fs.openSync(fn, 'r')
-    fs.readSync(fd, sendKeys, 0, 0xffffff, 0)
-    fs.readSync(fd, recvKeys, 0, 0xffffff, 0x1000000)
+    fs.readSync(fd, sendKeys, 0, keyBufferSize, 0)
+    fs.readSync(fd, recvKeys, 0, keyBufferSize, keyBufferSize)
     fs.closeSync(fd);
   }
   else {
@@ -33,14 +34,16 @@ var recvKeys = new Buffer(0xffffff)
     recvKey
       .putUInt32LE(conf.udp.serverKey)
       .putUInt8(MAGICVALUE_UDP_CLIENTSERVER)
+
+    // There are 0xffff possible keys
     for (var i=0; i<0x10000; i++) {
       sendKey.pos(5).putUInt16LE(i)
       recvKey.pos(5).putUInt16LE(i)
       sendKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(sendKey), false).state)
       recvKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(recvKey), false).state)
     }
-    fs.writeSync(fd, sendKeys, 0, 0xffffff, 0)
-    fs.writeSync(fd, recvKeys, 0, 0xffffff, 0x1000000)
+    fs.writeSync(fd, sendKeys, 0, keyBufferSize, 0)
+    fs.writeSync(fd, recvKeys, 0, keyBufferSize, keyBufferSize)
     fs.closeSync(fd)
   }
 })()
