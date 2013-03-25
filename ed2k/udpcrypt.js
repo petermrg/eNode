@@ -17,9 +17,10 @@ var recvKeys = new Buffer(keyBufferSize)
 ;(function() {
   var fn = 'udpkeys-'+conf.udp.serverKey.toString(16)+'.dat'
   if (fs.existsSync(fn)) {
+    log.info('Loading UDP keys from disk...');
     var fd = fs.openSync(fn, 'r')
     fs.readSync(fd, sendKeys, 0, keyBufferSize, 0)
-    fs.readSync(fd, recvKeys, 0, keyBufferSize, keyBufferSize)
+    fs.readSync(fd, recvKeys, 0, keyBufferSize, keyBufferSize+1)
     fs.closeSync(fd);
   }
   else {
@@ -43,7 +44,7 @@ var recvKeys = new Buffer(keyBufferSize)
       recvKeys.putBuffer(crypt.RC4CreateKey(crypt.md5(recvKey), false).state)
     }
     fs.writeSync(fd, sendKeys, 0, keyBufferSize, 0)
-    fs.writeSync(fd, recvKeys, 0, keyBufferSize, keyBufferSize)
+    fs.writeSync(fd, recvKeys, 0, keyBufferSize, keyBufferSize+1)
     fs.closeSync(fd)
   }
 })()
