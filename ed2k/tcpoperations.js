@@ -23,11 +23,12 @@ var isFirewalled = function(client, crypted, callback) {
 
   testClient.on('connected', function() {
     if (crypted) {
-      log.debug('HANDSHAKE > '+client.remoteAddress)
+      log.trace('isFirewalled: Sending handshake to '+client.remoteAddress)
       testClient.handshake(client.info.hash)
     }
     else {
-      log.debug('OP_HELLO > '+client.remoteAddress+':'+client.info.port)
+      log.trace('isFirewalled: Send HELLO to '+
+        client.remoteAddress+':'+client.info.port)
       testClient.send(OP_HELLO, null, function(err) {})
     }
   })
@@ -38,9 +39,9 @@ var isFirewalled = function(client, crypted, callback) {
     callback(true)
   })
 
-  testClient.on('timeout', function(from) {
-    log.trace('isFirewalled got timeout from: '+from)
-    switch (from) {
+  testClient.on('timeout', function(sender) {
+    log.trace('isFirewalled: Got timeout from: '+sender)
+    switch (sender) {
       case 'connection':
       case 'hello':
         testClient.end()
@@ -55,16 +56,19 @@ var isFirewalled = function(client, crypted, callback) {
 
   testClient.on('handshake', function(err) {
     if (err == false) {
-      testClient.end()
-      callback(false)
+      log.trace('isFirewalled: send HELLO (crypted) to '+
+        client.remoteAddress+':'+client.info.port)
+      testClient.send(OP_HELLO, null, function(err) {
+        if (err) log.error('isFirewalled: sending crypted hello')
+      })
     }
     // else do nothing because we will get a handshake timeout
   })
 
   testClient.on('ophelloanswer', function(info) {
-    log.info('Received hello answer!')
+    log.trace('isFirewalled: Received hello answer!')
+    console.dir(info)
     testClient.end()
-    //console.dir(info)
     callback(false)
   })
 
@@ -263,10 +267,10 @@ var receive = {
     log.debug('OFFERFILES < '+client.info.storageId)
     var count = client.packet.data.getFileList(function(file) {
       //log.trace(file.name+' '+file.size+' '+file.hash.toString('hex'))
-      db.files.add(file, client.info)
+      db.files.addSource(file, client.info)
     })
     log.trace('Got '+count+' files from '+client.remoteAddress+
-      ' Total files: '+db.files.count())
+      ' Total files: '+db.files.getCount())
   },
 
   getServerList: function(client) {
@@ -365,7 +369,7 @@ var send = {
     log.debug('SERVERLIST > '+client.info.storageId)
     var pack = [
       [TYPE_UINT8, OP_SERVERLIST],
-      [TYPE_UINT8, db.servers.count()],
+      [TYPE_UINT8, db.servers.getCount()],
     ]
     db.servers.all().forEach(function(v) {
       log.trace(v.ip+':'+v.port)
@@ -376,12 +380,14 @@ var send = {
   },
 
   serverStatus: function(client) {
-    log.debug('SERVERSTATUS > '+client.info.storageId+' clients: '+db.clients.count()+
-      ' files: '+db.files.count())
+    log.debug('SERVERSTATUS > '+client.info.storageId+
+      ' clients: '+db.clients.getCount()+
+      ' files: '+db.files.getCount()
+    )
     var pack = [
       [TYPE_UINT8, OP_SERVERSTATUS],
-      [TYPE_UINT32, db.clients.count()],
-      [TYPE_UINT32, db.files.count()]
+      [TYPE_UINT32, db.clients.getCount()],
+      [TYPE_UINT32, db.files.getCount()]
     ]
     submit(Packet.make(PR_ED2K, pack), client)
   },
@@ -397,7 +403,7 @@ var send = {
   },
 
   callbackFailed: function(client) {
-    log.debug('CALLBACKFAILED > '+client.info.storageId+' id: '+id)
+    log.debug('CALLBACKFAILED > '+client.info.storageId)
     var pack = [[TYPE_UINT8, OP_CALLBACKFAILED]]
     submit(Packet.make(PR_ED2K, pack), client)
   },
