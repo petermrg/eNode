@@ -275,15 +275,13 @@ Buffer.prototype.getTag = function() {
   return tag
 }
 
-Buffer.prototype.getTags = function(callback) {
+Buffer.prototype.getTags = function() {
   var count = this.getUInt32LE()
-  //log.trace('Got '+count+' tags')
   var tags = []
   while (count--) {
     var tag = this.getTag()
     if (tag === false) return ['TAGERROR',true]
     tags.push(tag)
-    if (callback != undefined) callback(tag)
   }
   return tags
 }
