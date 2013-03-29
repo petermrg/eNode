@@ -1,10 +1,20 @@
 var hexDump = require('hexy').hexy
 
+/**
+ * Prints an hexadecimal dump in console
+ */
 exports.hexDump = function(data) {
   console.log(hexDump(data))
 }
 
+/**
+ * Get file extension
+ *
+ * @param {String} name Filename
+ * @returns {String} Extension (without the dot)
+ */
 exports.ext = function(name) {
+  if (!name) return ''
   return name.substring(name.lastIndexOf('.')+1, name.length).toLowerCase()
 }
 
@@ -55,11 +65,21 @@ exports.getFileType = function(name) {
   return ''
 }
 
+/**
+ * Returns true if the given parameter is valid eD2K/eMule protocol number
+ *
+ * @param {Integer} protocol
+ * @returns {Boolean}
+ */
 exports.isProtocol = function(protocol) {
   return
     (protocol == PR_ED2K) ||
     (protocol == PR_EMULE) ||
     (protocol == PR_ZLIB)
+}
+
+exports.isFunction = function(something) {
+  return typeof(something) == 'function'
 }
 
 /**
