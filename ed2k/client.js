@@ -69,15 +69,14 @@ Client.prototype._decrypt = function(data) {
   switch (_this.crypt.status) {
 
     case CS_ENCRYPTING:
-      log.trace('Client._decrypt: Decrypting')
-      data = crypt.RC4Crypt(data, data.length, _this.recvKey)
-      break
+      log.trace('Client._decrypt: decrypting')
+      return crypt.RC4Crypt(data, data.length, _this.recvKey)
 
     case CS_NEGOTIATING:
       data = crypt.RC4Crypt(data, data.length, _this.recvKey)
       if (data.getUInt32LE() == MAGICVALUE_SYNC) {
         clearTimeout(this.handshakeTimeout)
-        log.trace('Client._decrypt: Negotiation response Ok.')
+        log.trace('Client._decrypt: negotiation response Ok.')
         _this.crypt.method = data.getUInt8() // should be == EM_OBFUSCATE
         data.get(data.getUInt8()) // skip padding
         _this.crypt.status = CS_ENCRYPTING
@@ -99,7 +98,7 @@ Client.prototype._decrypt = function(data) {
 
     case CS_UNKNOWN:
     default:
-      log.error('Client._decrypt: We souldn\'t be here')
+      log.error('Client._decrypt: we souldn\'t be here')
       return data
   }
 }
@@ -114,19 +113,19 @@ Client.prototype.connect = function(host, port, hash) {
     var protocol = data.getUInt8()
     if (protocol == PR_ED2K) {
       var size = data.getUInt32LE()
-      var d = data.get(size)
-      var opcode = d.getUInt8()
+      var payload = data.get(size)
+      var opcode = payload.getUInt8()
       switch (opcode) {
         case OP_HELLOANSWER:
-          clearTimeout(t.opHelloTimeout)
-          _this.emit('ophelloanswer', readOpHelloAnswer(d))
+          clearTimeout(_this.opHelloTimeout)
+          _this.emit('ophelloanswer', readOpHelloAnswer(payload))
           break
         default:
-          log.warn('eD2K CLient: Unhandled opcode: 0x'+opcode.toString(16))
+          log.warn('Client.on data: bad opcode: 0x'+opcode.toString(16))
       }
     }
     else {
-      log.error('eD2K Client: incoming data: bad protocol: 0x'+
+      log.error('Client.on data: bad protocol: 0x'+
         protocol.toString(16))
     }
   })
@@ -148,6 +147,15 @@ Client.prototype.connect = function(host, port, hash) {
   return this
 }
 
+Client.prototype.submit = function(data, callback) {
+  if (this.crypt.status == CS_ENCRYPTING) {
+      log.trace('Client.submit: encrypt')
+      data = crypt.RC4Crypt(data, data.length, this.sendKey)
+  }
+  log.trace('Client.submit: send data')
+  this.socket.write(data, callback)
+}
+
 Client.prototype.send = function(operation, info, callback) {
   var pack = [[TYPE_UINT8, operation]]
   var _this = this
@@ -166,7 +174,7 @@ Client.prototype.send = function(operation, info, callback) {
       _this.opHelloTimeout = setTimeout(function() {
         _this.emit('timeout', 'hello')
       }, conf.tcp.connectionTimeout)
-      _this.socket.write(Packet.make(PR_ED2K, pack), callback)
+      _this.submit(Packet.make(PR_ED2K, pack), callback)
       break
   }
 }
@@ -180,11 +188,13 @@ var readOpHelloAnswer = function(data) {
   info.hash = data.get(16)
   info.id = data.getUInt32LE()
   info.port = data.getUInt16LE()
-  info.tags = data.getTags()
+  data.getTags().forEach(function(v) {
+    info[v[0]] = v[1]
+  })
   info.serverAddress = data.getUInt32LE()
   info.serverPort = data.getUInt16LE()
   if (data.pos() < data.length) {
-    log.warn('readOpHelloAnswer Excess: '+log.get().toString('hex'))
+    log.warn('readOpHelloAnswer excess: '+log.get().toString('hex'))
   }
   return info
 }
