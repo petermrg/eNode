@@ -257,10 +257,49 @@ Ed2kMessage.prototype.readTags = function() {
 }
 
 /**
+ * Write a single tag to message
+ *
+ * @param  {Array} tag Structure: Array [type, code, data]
+ */
+Ed2kMessage.prototype.writeTag = function(tag) {
+	this.writeUInt8(tag[0]).writeUInt16LE(1).writeUInt8(tag[1])	 // (type).(length=1).(code)
+	switch (tag[0]) {
+		case TYPE.STRING:
+			this.writeString(tag[2])
+			break
+		case TYPE.UINT8:
+			this.writeUInt8(tag[2])
+			break
+		case TYPE.UINT16:
+			this.writeUInt16LE(tag[2])
+			break
+		case TYPE.UINT32:
+			this.writeUInt32LE(tag[2])
+			break
+		default: log.error('Buffer.writeTag: Unhandled tag type: 0x'+tag[0].toString(16))
+	}
+}
+
+/**
+ * Write tags to message
+ *
+ * @param {Array} tags
+ * @return {Ed2kMessage} self
+ */
+Ed2kMessage.prototype.writeTags = function(tags) {
+	var count = tags.length;
+	this.writeUInt32LE(count);
+	for (var i = 0; i < count; i++) {
+		this.writeTag(tags[i]);
+	}
+	return this;
+}
+
+/**
  * Reads string from buffer. If no length is specified, the length
  * is obtained from the first 16 bits (little endian)
  *
- * @param	{integer} length
+ * @param {integer} length
  * @return {string}
  * @todo {test}
  */
@@ -274,38 +313,55 @@ Ed2kMessage.prototype.readString = function(length) {
 /**
  * Write string to buffer
  *
- * @param	{[type]} str
- * @return {[type]}
+ * @param {String} str
+ * @param {String} encoding Charset encoding. Defaults to 'utf8'
+ * @return {Ed2kMessage} self
  */
-Ed2kMessage.prototype.writeString = function(str) {
-	var length = Buffer.byteLength(str);
+Ed2kMessage.prototype.writeString = function(str, encoding) {
+	var length = Buffer.byteLength(str, encoding);
 	this.writeUInt16LE(length);
 	while (this.getSizeLeft() < length) {
 		this.grow();
 	}
-	this._buffer.write(str, this._pointer, conf.noAssert);
-	this._pointer+= length;
+	var bytesWritten = this._buffer.write(str, this._pointer, encoding);
+	this._pointer+= bytesWritten;
 	return this;
 }
 
 /**
  * Serializes array data into binary form
  *
- * @param	{Array} data
+ * @param {Array} data
  * @return {Ed2kMessage}
  */
 Ed2kMessage.prototype.serialize = function(data) {
 	var message = new Ed2kMessage();
-	data.forEach(function(item) {
-		switch (item[0]) {
-			case TYPE_UINT8 : message.writeUInt8(item[1]); break;
-			case TYPE_UINT16: message.writeUInt16LE(item[1]); break;
-			case TYPE_UINT32: message.writeUInt32LE(item[1]); break;
-			case TYPE_STRING: message.writeString(item[1]); break;
-			case TYPE_HASH	: message.writeHash(item[1]); break;
-			case TYPE_TAGS	: message.writeTags(item[1]); break;
+		count = data.length;
+
+	for (var i = 0; i < count; i++) {
+		switch (data[i][0]) {
+			case TYPE.UINT8:
+				message.writeUInt8(data[i][1]);
+				break;
+			case TYPE.UINT16:
+				message.writeUInt16LE(data[i][1]);
+				break;
+			case TYPE.UINT32:
+				message.writeUInt32LE(data[i][1]);
+				break;
+			case TYPE.STRING:
+				message.writeString(data[i][1]);
+				break;
+			case TYPE.HASH:
+				message.writeHash(data[i][1]);
+				break;
+			case TYPE.TAGS:
+				message.writeTags(data[i][1]);
+				break;
+			default:
+				log.error('Ed2kMessage.serialize: unhandled tag code: 0x' + data[i][0].toString(16));
 		}
-	});
+	}
 	return message;
 }
 
