@@ -31,7 +31,7 @@ var connectionHandler = function (connection) {
 	connection.on('data', function(data) {
 		stream.append(client.status, data);
 		stream.parse().forEach(function(message) {
-			response = Ed2kTcpOperations.dispatch(client, message);
+			response = Ed2kTcpOperations.dispatch(message);
 			log.debug(response);
 		});
 	});

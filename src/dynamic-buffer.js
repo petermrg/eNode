@@ -1,7 +1,7 @@
 var log = require('tinylogger')
 
 var noAssert = false,
-	bufferSize = 5,
+	bufferSize = 1024,
 	growFactor = 2;
 
 /**
@@ -14,7 +14,7 @@ var DynamicBuffer = function (size) {
 	this._buffer = new Buffer(size || bufferSize);
 }
 
-DynamicBuffer.prototype.getPos = function(pos) {
+DynamicBuffer.prototype.tell = function(pos) {
 	return this._position;
 }
 
@@ -23,7 +23,7 @@ DynamicBuffer.prototype.getPos = function(pos) {
  *
  * @return {DynamicBuffer} self (chainable)
  */
-DynamicBuffer.prototype.setPos = function(pos) {
+DynamicBuffer.prototype.seek = function(pos) {
 	this._position = pos;
 	if (this._position > this._buffer.length) {
 		throw new Error('trying to set position (' + pos + ') beyond buffer size (' + this._buffer.length + ')');
@@ -85,18 +85,16 @@ DynamicBuffer.prototype.grow = function(factor) {
 }
 
 /**
- * Append data to buffer
+ * Write buffer contents to DynamicBuffer
  *
- * @param {Buffer} buffer data to append
+ * @param {Buffer} buffer append
  */
-DynamicBuffer.prototype.writeBuffer = function(data) {
-	if (data.length > this.getSizeLeft()) {
+DynamicBuffer.prototype.writeBuffer = function(buffer) {
+	while (this.getSizeLeft() < buffer.length) {
 		this.grow();
-		this.writeBuffer(data);
-	} else {
-		data.copy(this._buffer, this._position, 0, data.length);
-		this._position+= data.length;
 	}
+	buffer.copy(this._buffer, this._position, 0, buffer.length);
+	this._position+= buffer.length;
 }
 
 /**
@@ -151,6 +149,9 @@ DynamicBuffer.prototype.readUInt8 = function() {
 }
 
 DynamicBuffer.prototype.writeUInt8 = function(n) {
+	if (this.getSizeLeft() < 1) {
+		this.grow();
+	}
 	this._buffer.writeUInt8(n, this._position, noAssert);
 	this._position++;
 	return this;
@@ -163,6 +164,9 @@ DynamicBuffer.prototype.readUInt16LE = function() {
 }
 
 DynamicBuffer.prototype.writeUInt16LE = function(n) {
+	if (this.getSizeLeft() < 2) {
+		this.grow();
+	}
 	this._buffer.writeUInt16LE(n, this._position, noAssert);
 	this._position+= 2;
 	return this;
@@ -175,6 +179,9 @@ DynamicBuffer.prototype.readUInt32LE = function() {
 }
 
 DynamicBuffer.prototype.writeUInt32LE = function(n) {
+	if (this.getSizeLeft() < 4) {
+		this.grow();
+	}
 	this._buffer.writeUInt32LE(n, this._position, noAssert);
 	this._position+= 4;
 	return this;
@@ -218,7 +225,7 @@ DynamicBuffer.prototype.get = function(len) {
 		var r = this.slice(this._position, end)
 		this._position = end
 	}
-	r.setPos(0)
+	r.seek(0)
 	return r
 }
 

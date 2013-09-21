@@ -30,8 +30,8 @@ describe('Ed2kTcpStream', function() {
 			stream.append(CS.NEW, goodPacket1);
 			r = stream.parse();
 			assert.equal(r.length, 1);
-			assert.equal(stream.getPos(), 0);
-			r.forEach(function(p) {	assert.equal(p.getPos(), p.getSize()); });
+			assert.equal(stream.tell(), 0);
+			r.forEach(function(p) {	assert.equal(p.tell(), p.getSize()); });
 			assert.equal(r[0].toString('hex'), goodPacket1.toString('hex'));
 		});
 
@@ -42,8 +42,8 @@ describe('Ed2kTcpStream', function() {
 			stream.append(CS.NEW, goodPacket1);
 			r = stream.parse();
 			assert.equal(r.length, 3);
-			assert.equal(stream.getPos(), 0);
-			r.forEach(function(p) {	assert.equal(p.getPos(), p.getSize()); });
+			assert.equal(stream.tell(), 0);
+			r.forEach(function(p) {	assert.equal(p.tell(), p.getSize()); });
 			assert.equal(r[0].toString('hex'), goodPacket1.toString('hex'));
 			assert.equal(r[1].toString('hex'), goodPacket2.toString('hex'));
 			assert.equal(r[2].toString('hex'), goodPacket1.toString('hex'));
@@ -52,17 +52,17 @@ describe('Ed2kTcpStream', function() {
 		it('waits until message is completed', function() {
 			var stream = new Ed2kTcpStream();
 			stream.append(CS.NEW, partPacket2a);
-			var tmp = stream.getPos();
+			var tmp = stream.tell();
 			r = stream.parse();
 			assert.equal(r.length, 0);
-			assert.equal(stream.getPos(), tmp);
+			assert.equal(stream.tell(), tmp);
 			stream.append(CS.NEW, partPacket2b);
 			stream.append(CS.NEW, goodPacket1);
 			stream.append(CS.NEW, goodPacket2);
 			r = stream.parse();
 			assert.equal(r.length, 3);
-			assert.equal(stream.getPos(), 0);
-			r.forEach(function(p) {	assert.equal(p.getPos(), p.getSize()); });
+			assert.equal(stream.tell(), 0);
+			r.forEach(function(p) {	assert.equal(p.tell(), p.getSize()); });
 			assert.equal(r[0].toString('hex'), goodPacket2.toString('hex'));
 			assert.equal(r[1].toString('hex'), goodPacket1.toString('hex'));
 			assert.equal(r[2].toString('hex'), goodPacket2.toString('hex'));
@@ -73,7 +73,7 @@ describe('Ed2kTcpStream', function() {
 			stream.append(CS.NEW, badPacket1);
 			r = stream.parse();
 			assert.equal(r.length, 0);
-			assert.equal(stream.getPos(), 0);
+			assert.equal(stream.tell(), 0);
 		});
 
 	});

@@ -83,7 +83,7 @@ Ed2kMessage.validProtocol = function(protocol) {
  * @return {integer} message opcode
  */
 Ed2kMessage.prototype.readOpcode = function() {
-	this.setPos(5);
+	this.seek(5);
 	return this.readUInt8();
 }
 
@@ -98,7 +98,7 @@ Ed2kMessage.prototype.shift = function(length) {
 	this._buffer.copy(result._buffer, 0, 0, length);
 	this._buffer.copy(this._buffer, 0, length);
 	this._position-= length;
-	result.setPos(length);
+	result.seek(length);
 	return result;
 }
 
@@ -120,9 +120,9 @@ Ed2kMessage.prototype.readTag = function() {
 		if (type >= 0x10) {
 			length = type - 0x10;
 			type = TYPE.STRING;
-			this.setPos(this.getPos() - 2);
+			this.seek(this.tell() - 2);
 			this.writeUInt16LE(length);
-			this.setPos(this.getPos() - 2);
+			this.seek(this.tell() - 2);
 		}
 	} else {
 		// Regular ed2k tag with given 'code' and 'type'
@@ -210,7 +210,7 @@ Ed2kMessage.prototype.readTag = function() {
 /**
  * [readTagValue description]
  *
- * @param  {[type]} type
+ * @param	{[type]} type
  * @return {[type]}
  */
 Ed2kMessage.prototype.readTagValue = function(type) {
@@ -260,7 +260,7 @@ Ed2kMessage.prototype.readTags = function() {
  * Reads string from buffer. If no length is specified, the length
  * is obtained from the first 16 bits (little endian)
  *
- * @param  {integer} length
+ * @param	{integer} length
  * @return {string}
  * @todo {test}
  */
@@ -274,18 +274,40 @@ Ed2kMessage.prototype.readString = function(length) {
 /**
  * Write string to buffer
  *
- * @param  {[type]} str
+ * @param	{[type]} str
  * @return {[type]}
  */
 Ed2kMessage.prototype.writeString = function(str) {
-	log.warning('not implemented!');
-	// var len = Buffer.byteLength(str)
-	// this.putUInt16LE(len)
-	// this.write(str, this._pointer, conf.noAssert)
-	// this._pointer+= len
-	// return this
+	var length = Buffer.byteLength(str);
+	this.writeUInt16LE(length);
+	while (this.getSizeLeft() < length) {
+		this.grow();
+	}
+	this._buffer.write(str, this._pointer, conf.noAssert);
+	this._pointer+= length;
+	return this;
 }
 
+/**
+ * Serializes array data into binary form
+ *
+ * @param	{Array} data
+ * @return {Ed2kMessage}
+ */
+Ed2kMessage.prototype.serialize = function(data) {
+	var message = new Ed2kMessage();
+	data.forEach(function(item) {
+		switch (item[0]) {
+			case TYPE_UINT8 : message.writeUInt8(item[1]); break;
+			case TYPE_UINT16: message.writeUInt16LE(item[1]); break;
+			case TYPE_UINT32: message.writeUInt32LE(item[1]); break;
+			case TYPE_STRING: message.writeString(item[1]); break;
+			case TYPE_HASH	: message.writeHash(item[1]); break;
+			case TYPE_TAGS	: message.writeTags(item[1]); break;
+		}
+	});
+	return message;
+}
 
 exports.Ed2kMessage = Ed2kMessage;
 exports.PROTOCOLS = PR;

@@ -32,6 +32,7 @@ var operations = [];
  * @return {Buffer} response
  */
 var dispatch = function(message) {
+	log.info(message);
 	var response = operations[message.readOpcode()](message);
 	if (message.getSizeLeft() > 0) {
 		log.error('loginRequest: remaining data in message');
@@ -45,7 +46,7 @@ var dispatch = function(message) {
  * @param  {[type]} message [description]
  * @return {Buffer}
  */
-operations[OP.LOGIN_REQUEST] = function (client, message) {
+operations[OP.LOGIN_REQUEST] = function (message) {
 	log.info('Ed2kTcpOperations.loginRequest: ');
 	var request = {
 		hash: message.read(16),

@@ -11,9 +11,9 @@ describe('Ed2kMessage', function() {
 		it('gets available free space in message', function() {
 			var d = new Ed2kPacket(50);
 			assert.equal(d.getSizeLeft(), 50);
-			d.setPos(40);
+			d.seek(40);
 			assert.equal(d.getSize(), 50);
-			assert.equal(d.getPos(), 40);
+			assert.equal(d.tell(), 40);
 			assert.equal(d.getSizeLeft(), 10);
 		})
 	});
@@ -29,7 +29,7 @@ describe('Ed2kMessage', function() {
 			assert.equal(d._buffer.length, len * 2);
 			assert.equal(d.toString(), str);
 			assert.equal(d.getSize(), len * 2);
-			assert.equal(d.getPos(), len);
+			assert.equal(d.tell(), len);
 		})
 	});
 
@@ -57,17 +57,17 @@ describe('Ed2kMessage', function() {
 		it('shifts a block of data from the message and returns it', function() {
 			d.writeBuffer(b1);
 			r = d.shift(str1.length);
-			assert.equal(r.getPos(), str1.length);
-			assert.equal(d.getPos(), str2.length);
+			assert.equal(r.tell(), str1.length);
+			assert.equal(d.tell(), str2.length);
 			assert.equal(r.toString(), str1);
 			assert.equal(d.toString(), str2);
 		});
 		it('shifts another block of data from the message', function() {
-			d.setPos(0);
+			d.seek(0);
 			d.writeBuffer(b2);
 			r = d.shift(str2.length);
-			assert.equal(r.getPos(), str2.length);
-			assert.equal(d.getPos(), str1.length);
+			assert.equal(r.tell(), str2.length);
+			assert.equal(d.tell(), str1.length);
 			assert.equal(r.toString(), str2);
 			assert.equal(d.toString(), str1);
 		});

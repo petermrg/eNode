@@ -10,9 +10,9 @@ describe('DynamicBuffer', function() {
 	describe('#sizeLeft()', function() {
 		it('gets available free space in buffer', function() {
 			var d = new DynamicBuffer(50);
-			d.setPos(40);
+			d.seek(40);
 			assert.equal(d.getSize(), 50);
-			assert.equal(d.getPos(), 40);
+			assert.equal(d.tell(), 40);
 			assert.equal(d.getSizeLeft(), 10);
 		})
 	});
@@ -28,7 +28,7 @@ describe('DynamicBuffer', function() {
 			assert.equal(d._buffer.length, len * 2);
 			assert.equal(d.toString(), str);
 			assert.equal(d.getSize(), len * 2);
-			assert.equal(d.getPos(), len);
+			assert.equal(d.tell(), len);
 		})
 	});
 

@@ -38,7 +38,7 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 		protocol,
 		messageSize,
 		dataSize,
-		bufferSize = this.getPos(),
+		bufferSize = this.tell(),
 		headerSize = 5; // protocol (8 bits) + size (32 bits) = 5 bytes
 
 	while (bufferSize >= headerSize) {
@@ -53,13 +53,13 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 
 			if (messageSize <= bufferSize) {
 				// restore buffer position
-				this.setPos(bufferSize);
+				this.seek(bufferSize);
 				message = this.shift(messageSize);
 				bufferSize-= messageSize;
 				result.push(message);
 			} else {
 				// restore buffer position
-				this.setPos(bufferSize);
+				this.seek(bufferSize);
 				// break while
 				bufferSize = 0;
 			}
