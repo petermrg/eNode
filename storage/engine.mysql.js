@@ -1,7 +1,7 @@
-var mysql = require('mysql'), // https://github.com/felixge/node-mysql
-  log = require('tinylogger'),
-  misc = require('../ed2k/misc.js'),
-  conf = require('../enode.config.js').config.storage.mysql;
+var mysql = require('mysql') // https://github.com/felixge/node-mysql
+var log = require('tinylogger')
+var misc = require('../ed2k/misc.js')
+var conf = require('../enode.config.js').config.storage.mysql
 
 var sql = {
 
@@ -117,7 +117,6 @@ clients = {
    * @param {Integer} clientInfo.ipv4
    * @param {Integer} clientInfo.port
    * @param {Function} callback(err, storageId)
-   * @returns undefined
    **/
   connect: function(clientInfo, callback) {
     var v = {
@@ -127,7 +126,8 @@ clients = {
       port: clientInfo.port,
       online: 1,
     };
-    sql.query('INSERT INTO clients SET ? ON DUPLICATE KEY UPDATE ? ', [v,v], function(err){
+    sql.query('INSERT INTO clients SET ? ON DUPLICATE KEY UPDATE ? ', [v,v],
+      function(err){
       if (err) { callback(err); return; }
       sql.query('SELECT id FROM clients WHERE hash = ? LIMIT 1', [clientInfo.hash], function(err, rows){
 
@@ -143,11 +143,10 @@ clients = {
   },
 
   /**
-   * @description Sets online status of client and client's file to 0
+   * Sets online status of client and client's file to 0
    * @param {Object} clientInfo Client connection information
    * @param {Integer} clientInfo.storageId
    * @param {Boolean} clientInfo.logged
-   * @returns undefined
    **/
   disconnect: function(clientInfo) { // when a user disconnects, set his online status to 0
     if (clientInfo.logged) {
@@ -260,10 +259,12 @@ var files = {
           'LIMIT 255';
         sql.query(q, [fileId], function(err, sources){
           if (err) { return sql.defErr(err); }
-          callback(fileHash, sources);
+          if (misc.isFunction(callback)) callback(fileHash, sources)
         });
       }
-      else { callback(fileHash, []); }
+      else {
+        if (misc.isFunction(callback)) callback(fileHash, [])
+      }
     });
   },
 
@@ -341,7 +342,7 @@ var searchExpr = function(token, type, value) {
     case 0xd4000101: return "s.bitrate>"+sql.esc(value);
     case 0xd3000101: return "s.duration>"+sql.esc(value);
     case 0x30000101: return "f.completed>"+sql.esc(value);
-    default: log.warn('searchExpr: unknown type: 0x'+type.toString(16)+'; token: 0x'+token.toString(16)+'; value: '+value);
+    default: log.warn('searchExpr: unknown type: 0x'+type.toString(16)+' - token: 0x'+token.toString(16)+'; value: '+value);
   }
 }
 

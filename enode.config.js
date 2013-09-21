@@ -2,10 +2,8 @@ exports.config = {
 
   name: '(TESTING!!!) eNode',
   description: 'eNode: experimental ed2k server written in node.js',
+  //address: '192.168.3.107',
   address: '192.168.1.2',
-  //address: '192.168.1.50',
-  //address: '192.168.1.33',
-  //address: '192.168.43.61',
   dynIp: '',
 
   messageLowID: 'You have LowID.',
@@ -38,7 +36,7 @@ exports.config = {
   },
 
   storage: {
-    engine: 'mysql',
+    engine: 'mongodb',
 
     mysql: {
       database: 'enode',
@@ -52,8 +50,10 @@ exports.config = {
     },
 
     mongodb: {
-      host: '127.0.0.1',
+      database: 'enode',
+      host: 'localhost',
       port: '27017',
+      log: true,
     }
   },
 

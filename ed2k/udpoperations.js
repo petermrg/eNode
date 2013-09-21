@@ -181,8 +181,8 @@ OP_GLOBSEARCHRES
     var pack = [
       [TYPE_UINT8, OP_GLOBSERVSTATRES],
       [TYPE_UINT32, challenge],
-      [TYPE_UINT32, db.clients.count()+2000], // fake value, for testing
-      [TYPE_UINT32, db.files.count()],
+      [TYPE_UINT32, db.clients.getCount()+2000], // fake value, for testing
+      [TYPE_UINT32, db.files.getCount()],
       [TYPE_UINT32, conf.tcp.maxConnections],
       [TYPE_UINT32, 10000], // server soft file limit ???
       [TYPE_UINT32, 20000], // server hard file limit ???
