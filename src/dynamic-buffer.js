@@ -47,7 +47,7 @@ DynamicBuffer.prototype.reset = function() {
  * @return {DynamicBuffer} this
  */
 DynamicBuffer.prototype.end = function() {
-	this._position = this_buffer.length;
+	this._position = this._buffer.length;
 	return this;
 }
 
@@ -82,6 +82,28 @@ DynamicBuffer.prototype.grow = function(factor) {
 	this._buffer.copy(temp, 0, 0, this._position);
 	this._buffer = temp;
 	return this._buffer.length;
+}
+
+/**
+ * Reads data and returns as buffer
+ *
+ * @param {Integer} length Number of bytes to read
+ * @return {Buffer}
+ */
+DynamicBuffer.prototype.readBuffer = function(length) {
+	var result = new Buffer(length);
+	this._buffer.copy(result, 0, this._position, this._position + length);
+	this._position+= length;
+	return result;
+}
+
+/**
+ * getBuffer
+ *
+ * @return {Buffer} instance of the DynamicBuffer contents
+ */
+DynamicBuffer.prototype.getBuffer = function() {
+	return this._buffer.slice(0, this._position);
 }
 
 /**

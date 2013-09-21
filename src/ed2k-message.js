@@ -5,58 +5,58 @@ var util = require('util'),
 var noAssert = false;
 
 // Protocol codes
-var PR = {
-	ED2K: 0xe3,
-	EMULE: 0xc5,
-	ZLIB: 0xd4
+global.PR = {
+	ED2K: 	0xE3,
+	EMULE: 	0xC5,
+	ZLIB: 	0xD4,
 }
 
 // Tag types
-var TYPE = {
-	HASH: 0x01,
+global.TYPE = {
+	HASH: 	0x01,
 	STRING: 0x02,
 	UINT32: 0x03,
-	FLOAT: 0x04,
+	FLOAT: 	0x04,
 	//BOOL: 0x05,
 	//BOOLARR: 0x06,
 	//BLOB: 0x07,
 	UINT16: 0x08,
-	UINT8: 0x09,
+	UINT8: 	0x09,
 	//BSOB: 0x0a,
-	TAGS: 0x0f
+	TAGS: 	0x0F,
 }
 
 // Tag codes
-var TAG = {
-	NAME: 0x01,
-	SIZE: 0x02,
-	TYPE: 0x03,
-	FORMAT: 0x04,
-	VERSION: 0x11,
-	VERSION_2: 0x91, // used in UDP OP_SERVERDESCRES
-	PORT: 0x0f,
-	DESCRIPTION: 0x0b,
-	DYN_IP: 0x85,
-	SOURCES: 0x15,
-	COMPLETE_SOURCES: 0x30,
-	MULE_VERSION: 0xfb,
-	FLAGS: 0x20,
-	RATING: 0xF7,
-	SIZE_HI: 0x3A,
-	SERVER_NAME: 0x01,
-	SERVER_DESC: 0x0b,
-	MEDIA_ARTIST: 0xd0,
-	MEDIA_ALBUM: 0xd1,
-	MEDIA_TITLE: 0xd2,
-	MEDIA_LENGTH: 0xd3,
-	MEDIA_BITRATE: 0xd4,
-	MEDIA_CODEC: 0xd5,
-	SEARCH_TREE: 0x0e,
-	EMULE_UDP_PORTS: 0xf9,
-	EMULE_OPTIONS_1: 0xfa,
-	EMULE_OPTIONS_2: 0xfe,
-	AUXPORTSLIST: 0x93
+global.TAG = {
+	NAME: 				0x01,
+	SIZE: 				0x02,
+	TYPE: 				0x03,
+	FORMAT: 			0x04,
+	VERSION: 			0x11,
+	FLAGS: 				0x20,
+	SIZE_HI: 			0x3A,
+	DESCRIPTION: 		0x0B,
+	SEARCH_TREE: 		0x0E,
+	PORT: 				0x0F,
+	SOURCES: 			0x15,
+	COMPLETE_SOURCES: 	0x30,
+	DYN_IP: 			0x85,
+	VERSION_2: 			0x91, // used in UDP OP_SERVERDESCRES
+	AUXPORTSLIST: 		0x93,
+	MEDIA_ARTIST: 		0xD0,
+	MEDIA_ALBUM: 		0xD1,
+	MEDIA_TITLE: 		0xD2,
+	MEDIA_LENGTH: 		0xD3,
+	MEDIA_BITRATE: 		0xD4,
+	MEDIA_CODEC: 		0xD5,
+	MULE_VERSION: 		0xFB,
+	RATING: 			0xF7,
+	EMULE_UDP_PORTS: 	0xF9,
+	EMULE_OPTIONS_1: 	0xFA,
+	EMULE_OPTIONS_2: 	0xFE,
 }
+
+var TAG_INVERSE = {};
 
 /**
  * DynamicBuffer extension to handle ed2k messages
@@ -103,9 +103,9 @@ Ed2kMessage.prototype.shift = function(length) {
 }
 
 /**
- * [readTag description]
+ * Read a tag from message. Tag structure: [type(UInt8), codeLength(UInt16), code(UInt8), data]
  *
- * @return {[type]}
+ * @return {Array} Array [tagCode, value]
  */
 Ed2kMessage.prototype.readTag = function() {
 	var type = this.readUInt8(),
@@ -114,7 +114,7 @@ Ed2kMessage.prototype.readTag = function() {
 		length = 0;
 
 	if (type & 0x80) {
-		// Lugdunum extended tag
+		// Lugdunum extended tag - type highest bit is set
 		code = this.readUInt8();
 		type = (type & 0x7f);
 		if (type >= 0x10) {
@@ -126,92 +126,25 @@ Ed2kMessage.prototype.readTag = function() {
 		}
 	} else {
 		// Regular ed2k tag with given 'code' and 'type'
-		length = this.readUInt16LE();
-		if (length == 1) {
-			// default ed2k tag
+		codeLength = this.readUInt16LE();
+		if (codeLength == 1) {
+			// default ed2k tag (code is a byte)
 			code = this.readUInt8();
 		} else {
-			// emule tag
-			log.warn('Unhandled tag. Length: '+length.toString(16));
-			return false;
+			// emule tag (code is a string?)
+			code = this.readString(codeLength);
+			log.warn('Unhandled tag. codeLength: ' + codeLength.toString(16));
 		}
 	}
 
-	switch (code) {
-		case TAG.NAME:
-			tag = ['name', this.readTagValue(type)];
-			break;
-		case TAG.SIZE:
-			tag = ['size', this.readTagValue(type)];
-			break;
-		case TAG.SIZE_HI:
-			tag = ['sizeHi', this.readTagValue(type)];
-			break;
-		case TAG.TYPE:
-			tag = ['type', this.readTagValue(type)];
-			break;
-		case TAG.FORMAT:
-			tag = ['format', this.readTagValue(type)];
-			break;
-		case TAG.VERSION:
-			tag = ['version', this.readTagValue(type)];
-			break;
-		case TAG.PORT:
-			tag = ['port2', this.readTagValue(type)];
-			break;
-		case TAG.SOURCES:
-			tag = ['sources', this.readTagValue(type)];
-			break;
-		case TAG.MULE_VERSION:
-			tag = ['muleVersion', this.readTagValue(type)];
-			break;
-		case TAG.FLAGS:
-			tag = ['flags', this.readTagValue(type)];
-			break;
-		case TAG.RATING:
-			tag = ['rating', this.readTagValue(type)];
-			break;
-		case TAG.MEDIA_ARTIST:
-			tag = ['artist', this.readTagValue(type)];
-			break;
-		case TAG.MEDIA_ALBUM:
-			tag = ['album', this.readTagValue(type)];
-			break;
-		case TAG.MEDIA_TITLE:
-			tag = ['title', this.readTagValue(type)];
-			break;
-		case TAG.MEDIA_LENGTH:
-			tag = ['length', this.readTagValue(type)];
-			break;
-		case TAG.MEDIA_BITRATE:
-			tag = ['bitrate', this.readTagValue(type)];
-			break;
-		case TAG.MEDIA_CODEC:
-			tag = ['codec', this.readTagValue(type)];
-			break;
-		case TAG.SEARCH_TREE:
-			tag = ['searchTree', this.readTagValue(type)];
-			break;
-		case TAG.EMULE_UDP_PORTS:
-			tag = ['udpPorts', this.readTagValue(type)];
-			break;
-		case TAG.EMULE_OPTIONS_1:
-			tag = ['options1', this.readTagValue(type)];
-			break;
-		case TAG.EMULE_OPTIONS_2:
-			tag = ['options2', this.readTagValue(type)];
-			break;
-		default:
-			tag = ['0x'+code.toString(16), this.readTagValue(type)];
-	}
-	return tag;
+	return [TAG_INVERSE[code] || 'UNKNOWN', this.readTagValue(type)];
 }
 
 /**
- * [readTagValue description]
+ * Read tag value from message
  *
- * @param	{[type]} type
- * @return {[type]}
+ * @param {Integer} type
+ * @return {Integer|String} Tag value
  */
 Ed2kMessage.prototype.readTagValue = function(type) {
 	switch (type) {
@@ -229,7 +162,7 @@ Ed2kMessage.prototype.readTagValue = function(type) {
 			break;
 		default:
 			value = false;
-			log.error('Unknown tag type: 0x'+type.toString(16));
+			log.error('Unknown tag type: 0x' + type.toString(16));
 	}
 	return value;
 }
@@ -262,6 +195,7 @@ Ed2kMessage.prototype.readTags = function() {
  * @param  {Array} tag Structure: Array [type, code, data]
  */
 Ed2kMessage.prototype.writeTag = function(tag) {
+	log.trace('Ed2kMessage.writeTag: ' + JSON.stringify(tag));
 	this.writeUInt8(tag[0]).writeUInt16LE(1).writeUInt8(tag[1])	 // (type).(length=1).(code)
 	switch (tag[0]) {
 		case TYPE.STRING:
@@ -287,6 +221,8 @@ Ed2kMessage.prototype.writeTag = function(tag) {
  * @return {Ed2kMessage} self
  */
 Ed2kMessage.prototype.writeTags = function(tags) {
+	log.trace('Ed2kMessage.writeTags: ');
+	console.log(tags);
 	var count = tags.length;
 	this.writeUInt32LE(count);
 	for (var i = 0; i < count; i++) {
@@ -314,7 +250,6 @@ Ed2kMessage.prototype.readString = function(length) {
  * Write string to buffer
  *
  * @param {String} str
- * @param {String} encoding Charset encoding. Defaults to 'utf8'
  * @return {Ed2kMessage} self
  */
 Ed2kMessage.prototype.writeString = function(str, encoding) {
@@ -323,21 +258,54 @@ Ed2kMessage.prototype.writeString = function(str, encoding) {
 	while (this.getSizeLeft() < length) {
 		this.grow();
 	}
-	var bytesWritten = this._buffer.write(str, this._pointer, encoding);
-	this._pointer+= bytesWritten;
+	var bytesWritten = this._buffer.write(str, this._position, encoding);
+	this._position+= bytesWritten;
 	return this;
+}
+
+/**
+ * Write a message to the message (append)
+ *
+ * @param {Ed2kMessage} message
+ * @return {Ed2kMessage} self
+ */
+Ed2kMessage.prototype.writeMessage = function(message) {
+	this.writeBuffer(message.getBuffer());
+	return this;
+}
+
+/**
+ * Read a hash from the message
+ *
+ * @param {Buffer} hash
+ * @return {Ed2kMessage} self
+ */
+Ed2kMessage.prototype.writeHash = function(hash) {
+	this.writeBuffer(hash);
+	return this;
+}
+
+/**
+ * Read a hash from the message
+ *
+ * @return {Buffer}
+ */
+Ed2kMessage.prototype.readHash = function() {
+	return this.readBuffer(16);
 }
 
 /**
  * Serializes array data into binary form
  *
- * @param {Array} data
+ * @param {Array} data Structure: Array[Array[type, value]]
  * @return {Ed2kMessage}
  */
-Ed2kMessage.prototype.serialize = function(data) {
-	var message = new Ed2kMessage();
-		count = data.length;
+Ed2kMessage.serialize = function(data) {
+	var message = new Ed2kMessage(),
+		count = data.length,
+		size = 0;
 
+  	message.seek(5);
 	for (var i = 0; i < count; i++) {
 		switch (data[i][0]) {
 			case TYPE.UINT8:
@@ -362,8 +330,23 @@ Ed2kMessage.prototype.serialize = function(data) {
 				log.error('Ed2kMessage.serialize: unhandled tag code: 0x' + data[i][0].toString(16));
 		}
 	}
+
+	// write the header
+	size = message.tell();
+	message
+		.reset()
+		.writeUInt8(PR.ED2K)
+		.writeUInt32LE(size - 5)
+		.seek(size);
 	return message;
 }
 
+;(function() {
+	for (var name in TAG) {
+		TAG_INVERSE[TAG[name]] = name;
+	}
+})();
+
 exports.Ed2kMessage = Ed2kMessage;
 exports.PROTOCOLS = PR;
+exports.TYPE = TYPE;

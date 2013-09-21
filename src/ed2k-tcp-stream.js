@@ -18,11 +18,11 @@ util.inherits(Ed2kTcpStream, Ed2kMessage);
 /**
  * Append data to stream
  *
- * @param {integer} clientStatus
+ * @param {Ed2kClient} client
  * @param {Buffer} data
  * @return {Ed2kTcpStream} self
  */
-Ed2kTcpStream.prototype.append = function (clientStatus, data) {
+Ed2kTcpStream.prototype.append = function (client, data) {
 	this.writeBuffer(data);
 	return this;
 };
