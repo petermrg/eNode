@@ -6,9 +6,10 @@ var config = require('../enode.config.js').config,
 	Ed2kTcpOperations = require('./ed2k-tcp-operations.js'),
 	Ed2kClient = require('./ed2k-client.js').Ed2kClient,
 	crypt = require('./crypt.js'),
-	hexDump = require('hexy').hexy;
+	hexDump = require('hexy').hexy,
+	async = require('async');
 
-var FLAG = {
+global.FLAG = {
 	ZLIB: 			0x0001,
 	IP_IN_LOGIN:	0x0002,
 	AUX_PORT: 		0x0004,
@@ -31,28 +32,73 @@ Ed2kTcpServer.prototype.start = function() {
 		log.ok('TcpServer: listening to: ' + self.port);
 	});
 };
+/*
+async.parallel([
+    function(callback){
+        setTimeout(function(){
+            callback(null, 'one');
+        }, 200);
+    },
+    function(callback){
+        setTimeout(function(){
+            callback(null, 'two');
+        }, 100);
+    }
+],
+// optional callback
+function(err, results){
+    // the results array will equal ['one','two'] even though
+    // the second function had a shorter timeout.
+});
 
+
+// an example using an object instead of an array
+async.parallel({
+    one: function(callback){
+        setTimeout(function(){
+            callback(null, 1);
+        }, 200);
+    },
+    two: function(callback){
+        setTimeout(function(){
+            callback(null, 2);
+        }, 100);
+    }
+},
+function(err, results) {
+    // results is now equals to: {one: 1, two: 2}
+});
+ */
 var connectionHandler = function (connection) {
 
 	var client = new Ed2kClient(connection.remoteAddress, connection.remotePort),
-		stream = new Ed2kTcpStream(),
-		response = new Ed2kMessage();
+		stream = new Ed2kTcpStream();
 
 	log.debug('TcpServer: new connection: ' + client);
 
 	connection.on('data', function(data) {
+		log.info('Ed2kTcpServer.connectionHandler: data from ' + client.toString() + ' (' + data.length + ' bytes)');
+
 		stream.append(client, data);
-		response.reset();
-		stream.parse().forEach(function(message) {
-			response.writeMessage(Ed2kTcpOperations.dispatch(client, message));
+
+		// async.reduce(array, initialValue, function(initialValue, arrayItem, callback(err, result)))
+		async.reduce(stream.parse(), new Ed2kMessage(), function(response, message, callback){
+			Ed2kTcpOperations.preProcessMessage(message, function (message) {
+				Ed2kTcpOperations.dispatch(client, message, function(result) {
+					if (result) {
+						response.writeMessage(result);
+					}
+					callback(null, response); // err, result
+				});
+			});
+		}, function(err, response){
+			if (client.status == CS.CONNECTION_CLOSE) {
+				connection.end();
+			} else {
+				connection.write(response.getBuffer());
+				log.trace('Ed2kTcpServer.connectionHandler response to ' + client.toString() + '\n' + hexDump(response.getBuffer()));
+			}
 		});
-		connection.write(response.getBuffer());
-
-		log.trace('Ed2kTcpServer.connectionHandler response to ' + client.toString() + '\n' + hexDump(response.getBuffer()));
-
-		if (client.status == CS.CONNECTION_CLOSE) {
-			connection.end();
-		}
 	});
 
 	connection.on('error', function (err) {

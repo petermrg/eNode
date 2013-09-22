@@ -2,58 +2,92 @@ var	Ed2kMessage = require('./ed2k-message.js').Ed2kMessage,
 	log = require('tinylogger'),
 	hexDump = require('hexy').hexy,
 	config = require('../enode.config.js').config,
+	zlib = require('zlib'),
 	helpers = require('./helpers.js');
+
 
 var OP = {
 	LOGIN_REQUEST: 		0x01, // aka HELLO
 	// HELLO_ANSWER: 		0x4c,
-	REJECT:  			0x05,
-	SERVER_MESSAGE: 	0x38,
-	SERVER_STATUS: 		0x34,
-	ID_CHANGE: 			0x40,
+	REJECT:				0x05,
 	// GET_SERVER_LIST: 	0x14,
-	// OFFER_FILES: 		0x15,
-	// SERVER_LIST: 		0x32,
-	SERVER_IDENT: 		0x41,
-	// GET_SOURCES: 		0x19,
-	// FOUND_SOURCES: 		0x42,
+	OFFER_FILES: 		0x15,
 	// SEARCH_REQUEST: 	0x16,
-	// SEARCH_RESULT: 		0x33,
+	// GET_SOURCES: 		0x19,
 	// CALLBACK_REQUEST: 	0x1c,
+	// GET_SOURCES_OBFU: 	0x23,
+	// SERVER_LIST: 		0x32,
+	// SEARCH_RESULT: 		0x33,
+	SERVER_STATUS: 		0x34,
 	// CALLBACK_REQUESTED: 0x35,
 	// CALLBACK_FAILED: 	0x36,
-	// GET_SOURCES_OBFU: 	0x23,
+	SERVER_MESSAGE: 	0x38,
+	ID_CHANGE: 			0x40,
+	SERVER_IDENT: 		0x41,
+	// FOUND_SOURCES: 		0x42,
 	// FOUND_SOURCES_OBFU: 0x44
 }
 
 var operations = [];
 var responses = [];
+
 /**
  * Dispatch message
  *
- * @param  {Ed2kClient} client
- * @param  {Ed2kMessage} message
- * @return {Ed2kMessage} response
+ * @param {Ed2kClient}  client
+ * @param {Ed2kMessage} message
+ * @param {Function}    callback(Ed2kMessage)
  */
-var dispatch = function(client, message) {
-	log.trace('Ed2kTcpOperations.dispatch\n' + hexDump(message._buffer));
-	var opcode = message.readOpcode();
-	var response = operations[opcode](client, message);
-	if (message.getSizeLeft() > 0) {
-		log.error('loginRequest: remaining data in message');
+var dispatch = function(client, message, callback) {
+	var opcode = message.readOpcode(); // also seeks message position to 5
+	log.debug('Ed2kTcpOperations.dispatch: 0x' + opcode + ' ' + client.toString());
+	operations[opcode](client, message, function(response) {
+		if (message.getSizeLeft() > 0) {
+			log.error('loginRequest: remaining data in message');
+		}
+		callback(response);
+	});
+};
+
+/**
+ * Preprocess a message
+ *
+ * @param {Ed2kMessage} message
+ * @param {Function}    callback(Ed2kMessage)
+ */
+var preProcessMessage = function(message, callback) {
+	message.reset();
+	// check for compressed message
+	if (message.readUInt8() == PR.ZLIB) {
+		zlib.unzip(message._buffer.slice(6), function (err, data) {
+			log.trace('Ed2kTcpOperations.preProcess: unzipping message');
+			if (err) {
+				log.error('Ed2kTcpOperations.preProcess: Error unzipping message');
+			} else {
+				log.trace('Ed2kTcpOperations.preProcess: unzip ok! (' + data.length + ' bytes)\n' + hexDump(data.slice(0, 64)));
+				unzipped = new Buffer(data.length + 6);
+				message._buffer.copy(unzipped, 0, 0, 6);
+				data.copy(unzipped, 6, 0, data.length);
+				message._buffer = unzipped;
+				message._buffer[0] = PR.ED2K;
+				callback(message);
+			}
+		});
+	} else {
+		message.end();
+		callback(message);
 	}
-	return response;
 };
 
 /**
  * Login request
  *
- * @param  {Ed2kClient} client
- * @param  {Ed2kMessage} message
- * @return {Ed2kMessage}
+ * @param {Ed2kClient} client
+ * @param {Ed2kMessage} message
+ * @param {Function} callback(Ed2kMessage)
  */
-operations[OP.LOGIN_REQUEST] = function (client, message) {
-	log.trace('Ed2kTcpOperations.loginRequest');
+operations[OP.LOGIN_REQUEST] = function (client, message, callback) {
+	log.trace('Ed2kTcpOperations.operations[LOGIN_REQUEST]');
 	var response = new Ed2kMessage(),
 		request;
 
@@ -64,8 +98,9 @@ operations[OP.LOGIN_REQUEST] = function (client, message) {
 			port: message.readUInt16LE(),
 			tags: message.readTags()
 		}
-		response.writeMessage(responses[OP.SERVER_MESSAGE](config.messageLogin));
+		log.trace('+ Login request: ' + JSON.stringify(request));
 		response.writeMessage(responses[OP.SERVER_MESSAGE]('server version ' + config.versionString + ' (eNode)'));
+		response.writeMessage(responses[OP.SERVER_MESSAGE](config.messageLogin));
 		response.writeMessage(responses[OP.SERVER_STATUS]());
 		response.writeMessage(responses[OP.ID_CHANGE](client));
 		response.writeMessage(responses[OP.SERVER_IDENT]());
@@ -73,7 +108,41 @@ operations[OP.LOGIN_REQUEST] = function (client, message) {
 		response = responses[OP.REJECT]();
 		client.status = CS.CONNECTION_CLOSE;
 	}
-	return response;
+	callback(response);
+}
+
+/**
+ * Offer files
+ *
+ * @param {Ed2kClient} client
+ * @param {Ed2kMessage} message
+ * @param {Function} callback(null)
+ */
+operations[OP.OFFER_FILES] = function (client, message, callback) {
+	var count = message.readUInt32LE(),
+		file, id, port;
+
+	log.trace('Ed2kTcpOperations.operations[OFFER_FILES]: Got ' + count + ' files.');
+
+	while (count--) {
+		file = {
+			hash: message.readHash(),
+			complete: true,
+		}
+		id = message.readUInt32LE();
+		port = message.readUInt16LE();
+		file.complete = (id == FILE.COMPLETE_ID && port == FILE.COMPLETE_PORT) ? true : false;
+		message.readTags(function (tag) {
+			file[tag[0]] = tag[1];
+		});
+		file.SIZE_LO = file.SIZE;
+		if (file.SIZE_HI) {
+			file.SIZE+= file.SIZE_HI * 0x100000000;
+		} else file.SIZE_HI = 0;
+		//log.trace(JSON.stringify(file));
+		//log.trace(JSON.stringify(file.NAME.substr(0, 50)));
+	}
+	callback(null);
 }
 
 /**
@@ -91,7 +160,7 @@ responses[OP.REJECT] = function () {
 /**
  * Server Message
  *
- * @param  {String} text Server message
+ * @param	{String} text Server message
  * @return {Ed2kMessage}
  */
 responses[OP.SERVER_MESSAGE] = function (text) {
@@ -208,22 +277,19 @@ loginRequest: function(client) {
 },
 */
 
-/**
- * Assign a fallback function to unhandled operations
- */
 ;(function() {
-	var noop = function (client, message) {
-		log.warn('Unhandled opcode: 0x' + message.readOpcode().toString(16));
+	// Assign a fallback function to unhandled operations
+	var noop = function (client, message, callback) {
+		log.warn('Unhandled opcode: 0x' + message.readOpcode().toString(16) + '\n' + hexDump(message._buffer.slice(0, 256)));
 		message.end();
-		return responses[OP.REJECT]();
+		callback(responses[OP.REJECT]());
 	}
 	for (var i = 0; i < 256; i++) {
 		operations[i] = operations[i] || noop;
 		responses[i] = responses[i] || noop;
 	}
-	log.ok('Init TCP operations and responses');
-	return null;
 })();
 
 exports.dispatch = dispatch;
+exports.preProcessMessage = preProcessMessage;
 //exports.TCP_OPCODES = OP;

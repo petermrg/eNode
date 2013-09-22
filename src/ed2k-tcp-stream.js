@@ -38,11 +38,11 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 		protocol,
 		messageSize,
 		dataSize,
+		code,
 		bufferSize = this.tell(),
 		headerSize = 5; // protocol (8 bits) + size (32 bits) = 5 bytes
 
 	while (bufferSize >= headerSize) {
-
 		this.reset();
 		protocol = this.readUInt8();
 
@@ -52,13 +52,11 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 			messageSize = dataSize + headerSize;
 
 			if (messageSize <= bufferSize) {
-				// restore buffer position
 				this.seek(bufferSize);
 				message = this.shift(messageSize);
 				bufferSize-= messageSize;
 				result.push(message);
 			} else {
-				// restore buffer position
 				this.seek(bufferSize);
 				// break while
 				bufferSize = 0;
@@ -71,9 +69,9 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 			bufferSize = 0;
 		}
 	}
+	log.trace('Ed2kTcpStream.parse: got ' + result.length + ' messages.')
 	return result;
 }
-
 
 exports.Ed2kTcpStream = Ed2kTcpStream;
 exports.CLIENT_STATUS = CS;

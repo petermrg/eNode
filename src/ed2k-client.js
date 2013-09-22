@@ -17,7 +17,7 @@ var Ed2kClient = function(address, port) {
 }
 
 Ed2kClient.prototype.toString = function() {
-	return JSON.stringify(this);
+	return [this.address,':',this.port].join('');
 }
 
 exports.Ed2kClient = Ed2kClient;

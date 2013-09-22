@@ -1,14 +1,15 @@
 var util = require('util'),
 	DynamicBuffer = require('./dynamic-buffer.js').DynamicBuffer,
+	hexDump = require('hexy').hexy,
 	log = require('tinylogger');
 
 var noAssert = false;
 
 // Protocol codes
 global.PR = {
-	ED2K: 	0xE3,
-	EMULE: 	0xC5,
-	ZLIB: 	0xD4,
+	ED2K: 	0xe3,
+	EMULE: 	0xc5,
+	ZLIB: 	0xd4,
 }
 
 // Tag types
@@ -23,7 +24,7 @@ global.TYPE = {
 	UINT16: 0x08,
 	UINT8: 	0x09,
 	//BSOB: 0x0a,
-	TAGS: 	0x0F,
+	TAGS: 	0x0f,
 }
 
 // Tag codes
@@ -34,29 +35,37 @@ global.TAG = {
 	FORMAT: 			0x04,
 	VERSION: 			0x11,
 	FLAGS: 				0x20,
-	SIZE_HI: 			0x3A,
-	DESCRIPTION: 		0x0B,
-	SEARCH_TREE: 		0x0E,
-	PORT: 				0x0F,
+	SIZE_HI: 			0x3a,
+	DESCRIPTION: 		0x0b,
+	SEARCH_TREE: 		0x0e,
+	PORT: 				0x0f,
 	SOURCES: 			0x15,
 	COMPLETE_SOURCES: 	0x30,
 	DYN_IP: 			0x85,
 	VERSION_2: 			0x91, // used in UDP OP_SERVERDESCRES
 	AUXPORTSLIST: 		0x93,
-	MEDIA_ARTIST: 		0xD0,
-	MEDIA_ALBUM: 		0xD1,
-	MEDIA_TITLE: 		0xD2,
-	MEDIA_LENGTH: 		0xD3,
-	MEDIA_BITRATE: 		0xD4,
-	MEDIA_CODEC: 		0xD5,
-	MULE_VERSION: 		0xFB,
-	RATING: 			0xF7,
-	EMULE_UDP_PORTS: 	0xF9,
-	EMULE_OPTIONS_1: 	0xFA,
-	EMULE_OPTIONS_2: 	0xFE,
-}
+	MEDIA_ARTIST: 		0xd0,
+	MEDIA_ALBUM: 		0xd1,
+	MEDIA_TITLE: 		0xd2,
+	MEDIA_LENGTH: 		0xd3,
+	MEDIA_BITRATE: 		0xd4,
+	MEDIA_CODEC: 		0xd5,
+	MULE_VERSION: 		0xfb,
+	RATING: 			0xf7,
+	EMULE_UDP_PORTS: 	0xf9,
+	EMULE_OPTIONS_1: 	0xfa,
+	EMULE_OPTIONS_2: 	0xfe,
+};
 
 var TAG_INVERSE = {};
+
+global.FILE = {
+	PARTIAL_ID: 	0xfcfcfcfc,
+	PARTIAL_PORT: 	0x0000fcfc,
+	COMPLETE_ID: 	0xfbfbfbfb,
+	COMPLETE_PORT: 	0x0000fbfb,
+};
+
 
 /**
  * DynamicBuffer extension to handle ed2k messages
@@ -88,18 +97,19 @@ Ed2kMessage.prototype.readOpcode = function() {
 }
 
 /**
- * Shifts a block of data from the start of the buffer and moves the rest to start
+ * Shifts a message from the start of the buffer and moves the remaining data to start
  *
  * @param {integer} length Size in bytes of the data to extract
- * @return {Buffer} Shifted data
+ * @return {Ed2kMessage} Shifted message
  */
 Ed2kMessage.prototype.shift = function(length) {
-	var result = new Ed2kMessage(length);
-	this._buffer.copy(result._buffer, 0, 0, length);
+	log.trace('Ed2kMessage.shift');
+	var message = new Ed2kMessage(length),
+		unzipped;
+	this._buffer.copy(message._buffer, 0, 0, length);
 	this._buffer.copy(this._buffer, 0, length);
 	this._position-= length;
-	result.seek(length);
-	return result;
+	return message;
 }
 
 /**
@@ -132,12 +142,13 @@ Ed2kMessage.prototype.readTag = function() {
 			code = this.readUInt8();
 		} else {
 			// emule tag (code is a string?)
-			code = this.readString(codeLength);
+			//code = this.readString(codelength);
 			log.warn('Unhandled tag. codeLength: ' + codeLength.toString(16));
+			throw Error('Unhandled tag. codeLength: ' + codeLength.toString(16));
 		}
 	}
 
-	return [TAG_INVERSE[code] || 'UNKNOWN', this.readTagValue(type)];
+	return [TAG_INVERSE[code] || ('0x' + code.toString(16)), this.readTagValue(type)];
 }
 
 /**
@@ -170,9 +181,10 @@ Ed2kMessage.prototype.readTagValue = function(type) {
 /**
  * Read tags from buffer
  *
+ * @param {Function} callback(tag) Optional callback to execute for each tag.
  * @return {Array} data
  */
-Ed2kMessage.prototype.readTags = function() {
+Ed2kMessage.prototype.readTags = function(callback) {
 	var count = this.readUInt32LE(),
 		tags = {},
 		tag = [];
@@ -185,6 +197,7 @@ Ed2kMessage.prototype.readTags = function() {
 			break;
 		}
 		tags[tag[0]] = tag[1];
+		if (callback) callback(tag);
 	}
 	return tags;
 }
@@ -195,7 +208,7 @@ Ed2kMessage.prototype.readTags = function() {
  * @param  {Array} tag Structure: Array [type, code, data]
  */
 Ed2kMessage.prototype.writeTag = function(tag) {
-	log.trace('Ed2kMessage.writeTag: ' + JSON.stringify(tag));
+	//log.trace('Ed2kMessage.writeTag: ' + JSON.stringify(tag));
 	this.writeUInt8(tag[0]).writeUInt16LE(1).writeUInt8(tag[1])	 // (type).(length=1).(code)
 	switch (tag[0]) {
 		case TYPE.STRING:
@@ -221,8 +234,8 @@ Ed2kMessage.prototype.writeTag = function(tag) {
  * @return {Ed2kMessage} self
  */
 Ed2kMessage.prototype.writeTags = function(tags) {
-	log.trace('Ed2kMessage.writeTags: ');
-	console.log(tags);
+	// log.trace('Ed2kMessage.writeTags: ');
+	// console.log(tags);
 	var count = tags.length;
 	this.writeUInt32LE(count);
 	for (var i = 0; i < count; i++) {
