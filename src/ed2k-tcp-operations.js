@@ -20,7 +20,7 @@ var operations = [],
  * @param {Function}	callback(Ed2kMessage)
  */
 var dispatch = function(client, message, callback) {
-	var opcode = message.readOpcode(); // also seeks message position to 5
+	var opcode = message.readOpcode(); // readOpcode seeks message position to 5
 	// log.debug('Ed2kTcpOperations.dispatch: 0x' + opcode + ' ' + client.toString());
 	operations[opcode](client, message, function(response) {
 		if (message.getSizeLeft() > 0) {
@@ -77,17 +77,28 @@ operations[OP.LOGIN_REQUEST] = function (client, message, callback) {
 		client[tag[0]] = tag[1];
 	});
 
-	if (client.status == CS.NOT_LOGGED) {
-		Storage.clients.isConnected(client, function (err, connected) {
+	if (client.status == CS.NOT_CONNECTED) {
+		Storage.clients.isConnected(client, function (err, isConnected) {
 			var response = new Ed2kMessage();
-			if (!connected) {
-				log.trace('+ Login request: ' + JSON.stringify(client));
-				response.writeMessage(responses[OP.SERVER_MESSAGE]('server version ' + config.versionString + ' (eNode)'));
-				response.writeMessage(responses[OP.SERVER_MESSAGE](config.messageLogin));
-				response.writeMessage(responses[OP.SERVER_STATUS]());
-				response.writeMessage(responses[OP.ID_CHANGE](client));
-				response.writeMessage(responses[OP.SERVER_IDENT]());
-				callback(response);
+			if (!isConnected) {
+				Storage.clients.connect(client, function (err, result) {
+					if (!err && (result == 1)) {
+						client.status = CS.CONNECTED;
+						log.trace('+ Login request: ' + JSON.stringify(client));
+						response.writeMessage(responses[OP.SERVER_MESSAGE]('server version ' + config.versionString + ' (eNode)'));
+						response.writeMessage(responses[OP.SERVER_MESSAGE](config.messageLogin));
+						response.writeMessage(responses[OP.SERVER_STATUS]());
+						response.writeMessage(responses[OP.ID_CHANGE](client));
+						response.writeMessage(responses[OP.SERVER_IDENT]());
+						callback(response);
+					} else {
+						client.status = CS.CONNECTION_CLOSE;
+						response.writeMessage(responses[OP.SERVER_MESSAGE]('Error saving client session in database'));
+						response.writeMessage(responses[OP.SERVER_MESSAGE]('result: ' + JSON.stringify(result)));
+						response.writeMessage(responses[OP.SERVER_MESSAGE]('error: ' + err));
+						callback(response);
+					}
+				});
 			} else {
 				client.status = CS.CONNECTION_CLOSE;
 				callback(responses[OP.SERVER_MESSAGE]('A client with the same hash is already connected. Closing connection.'));
@@ -287,7 +298,7 @@ responses[OP.FOUND_SOURCES_OBFU] = function (file) {
  * @return {Ed2kMessage}
  */
 responses[OP.REJECT] = function () {
-	log.trace('REJECT')
+	log.trace('REJECT');
 	return Ed2kMessage.serialize([
 		[TYPE.UINT8, OP.REJECT],
 	]);
@@ -300,7 +311,7 @@ responses[OP.REJECT] = function () {
  * @return {Ed2kMessage}
  */
 responses[OP.SERVER_MESSAGE] = function (text) {
-	log.trace('SERVER_MESSAGE')
+	log.trace('SERVER_MESSAGE: ' + text);
 	return Ed2kMessage.serialize([
 		[TYPE.UINT8, OP.SERVER_MESSAGE],
 		[TYPE.STRING, text],
@@ -313,7 +324,7 @@ responses[OP.SERVER_MESSAGE] = function (text) {
  * @return {Ed2kMessage}
  */
 responses[OP.SERVER_STATUS] = function () {
-	log.trace('SERVER_STATUS')
+	log.trace('SERVER_STATUS');
 	return Ed2kMessage.serialize([
 		[TYPE.UINT8, OP.SERVER_STATUS],
 		[TYPE.UINT32, 1111], // clients count
@@ -327,7 +338,7 @@ responses[OP.SERVER_STATUS] = function () {
  * @return {Ed2kMessage}
  */
 responses[OP.ID_CHANGE] = function (client) {
-	log.trace('ID_CHANGE')
+	log.trace('ID_CHANGE');
 	return Ed2kMessage.serialize([
 		[TYPE.UINT8, OP.ID_CHANGE],
 		[TYPE.UINT32, client.id],

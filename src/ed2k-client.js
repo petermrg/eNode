@@ -12,15 +12,13 @@ var util = require('util'),
 var Ed2kClient = function(id, port) {
 	this.id = id || null; // int32
 	this.hash = null; // Buffer(16);
-	this.status = CS.NOT_LOGGED;
-	this.connected = false;
+	this.status = CS.NOT_CONNECTED;
 	this.port = port || null; // int16
 	this.name = null; // string
 	this.version = null;
 	this.muleVersion = null;
 	this.flags = null;
 	this.time = new Date(); // connection time
-	this.connected = false;
 }
 
 Ed2kClient.prototype.toString = function() {

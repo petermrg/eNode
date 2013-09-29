@@ -118,6 +118,7 @@ global.OP = {
  * Client Status
  */
 global.CS = {
-	NOT_LOGGED: 		0x00,
-	CONNECTION_CLOSE: 	0x01,
+	NOT_CONNECTED:		0x00,
+	CONNECTED: 			0x01,
+	CONNECTION_CLOSE: 	0xF0,
 }

@@ -85,9 +85,13 @@ var connectionHandler = function (connection) {
 		log.error('Client socket error.' + err);
 	});
 
-	// FIN packet received
 	connection.on('end', function () {
-		log.debug('TcpServer: connection end: ' + client);
+		log.debug('Ed2kTcpServer.connectionHandler.end: ' + client);
+		if (client.status == CS.CONNECTED) {
+			Storage.clients.disconnect(client, function(err, result) {
+				log.info('Ed2kTcpServer.connectionHandler.end: saved in database');
+			});
+		}
 	});
 
 	connection.on('close', function (hadError) {

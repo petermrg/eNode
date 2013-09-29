@@ -40,34 +40,39 @@ Storage.clients = {
 	},
 
 	/**
-	 * Connect. Saves client information in database. Update client time
+	 * Connect. Saves client information in database. Updates client time.
 	 *
 	 * @param {Ed2kClient} client
-	 * @param {Function}   callback(err)
+	 * @param {Function}   callback(err, result)
 	 */
 	connect: function(client, callback) {
+		log.trace('Storage.clients.connect: ' + client.toString());
 		client.time = new Date();
 		client.connected = true;
-
-		Storage.collections.clients.save(
-			{ 	// data
-				hash: client.hash,
-				id: client.id,
-				port: client.port,
-				connected: client.connected,
-				time: client.time
-			},
-			{upsert: true},
-			callback
-		);
+		var data = {
+			hash: client.hash,
+			id: client.id,
+			port: client.port,
+			time: client.time,
+			connected: true,
+		}
+		Storage.collections.clients.update({hash: data.hash}, data, {upsert: 1, w: 1}, callback);
 	},
 
 	/**
-	 * [disconnect description]
-	 * @return {[type]} [description]
+	 * Disconnect. Sets client connection state to false.
+	 *
+	 * @param {Ed2kClient} client
+	 * @param {Function}   callback(err)
+	 * @todo  remove sources if id is low id?
 	 */
-	disconnect: function(callback) {
-		// remove sources if id is low id
+	disconnect: function(client, callback) {
+		log.trace('Storage.clients.disconnect: ' + client.toString());
+		var data = {
+			hash: client.hash,
+			connected: false,
+		}
+		Storage.collections.clients.update({hash: data.hash}, data, {upsert: 1, w: 1}, callback);
 	}
 
 }
@@ -283,6 +288,9 @@ Storage.connect = function (callback) {
 		openConnection,
 		createCollections,
 		setIndexes,
+		function(callback) {
+			Storage.collections.clients.update({}, {$set: {connected: false}}, {w: 1}, callback);
+		}
 	], function (err, results) {
 		if (!err) {
 			log.ok('MongoDB ready!');
