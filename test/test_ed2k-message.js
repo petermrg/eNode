@@ -1,5 +1,5 @@
 var assert = require("assert"),
-	Ed2kMessage = require('../src/ed2k-message.js').Ed2kMessage;
+	Ed2kMessage = require('../src/ed2k-message.js');
 
 describe('Ed2kMessage', function() {
 

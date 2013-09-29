@@ -1,6 +1,5 @@
 var assert = require("assert"),
-	Ed2kTcpStream = require('../src/ed2k-tcp-stream.js').Ed2kTcpStream;
-	CS = require('../src/ed2k-tcp-stream.js').CLIENT_STATUS;
+	Ed2kTcpStream = require('../src/ed2k-tcp-stream.js');
 
 describe('Ed2kTcpStream', function() {
 

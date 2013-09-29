@@ -1,25 +1,16 @@
-var config = require('../enode.config.js').config,
+require('./ed2k-globals.js');
+
+var config = require('../enode.config.js'),
 	net = require('net'),
 	log = require('tinylogger'),
-	Ed2kMessage = require('./ed2k-message.js').Ed2kMessage,
-	Ed2kTcpStream = require('./ed2k-tcp-stream.js').Ed2kTcpStream,
+	Ed2kMessage = require('./ed2k-message.js'),
+	Ed2kTcpStream = require('./ed2k-tcp-stream.js'),
 	Ed2kTcpOperations = require('./ed2k-tcp-operations.js'),
-	Ed2kClient = require('./ed2k-client.js').Ed2kClient,
+	Ed2kClient = require('./ed2k-client.js'),
+	Storage = require('./storage-' + config.storage.engine + '.js'), // remove this when no longer needed!
 	crypt = require('./crypt.js'),
 	hexDump = require('hexy').hexy,
-	async = require('async');
-
-global.FLAG = {
-	ZLIB: 			0x0001,
-	IP_IN_LOGIN:	0x0002,
-	AUX_PORT: 		0x0004,
-	NEW_TAGS: 		0x0008,
-	UNICODE: 		0x0010,
-	LARGE_FILES: 	0x0100,
-	SUPPORT_CRYPT: 	0x0200,
-	REQUEST_CRYPT: 	0x0400,
-	REQUIRE_CRYPT: 	0x0800,
-}
+	async = require('async')
 
 var Ed2kTcpServer = function(port) {
 	this.port = port;
@@ -31,48 +22,34 @@ Ed2kTcpServer.prototype.start = function() {
 	this.server.listen(self.port, function() {
 		log.ok('TcpServer: listening to: ' + self.port);
 	});
+
+	// the following startup code should be moved out of here
+	config.hash = crypt.md5(config.address + config.tcp.port);
+	config.tcp.flags =
+		FLAG.ZLIB +
+		FLAG.NEW_TAGS +
+		FLAG.UNICODE +
+		FLAG.LARGE_FILES +
+		(config.auxiliarPort ? FLAG.AUX_PORT : 0) +
+		(config.requireCrypt ? FLAG.REQUIRE_CRYPT : 0) +
+		(config.requestCrypt ? FLAG.REQUEST_CRYPT : 0) +
+		(config.supportCrypt ? FLAG.SUPPORT_CRYPT : 0) +
+		(config.IpInLogin ? FLAG.IP_IN_LOGIN : 0);
+	log.info('eNode ' + config.versionString);
+	log.info('Server hash: ' + config.hash.toString('hex'));
+	log.info('TCP flags: 0x' + config.tcp.flags.toString(16) + ' - ' + config.tcp.flags.toString(2));
+
+	if (config.storage.returnSourcesLimit > 256) {
+		config.storage.returnSourcesLimit = 256;
+		log.warn('Set config.storage.returnSourcesLimit to 256');
+	}
 };
-/*
-async.parallel([
-    function(callback){
-        setTimeout(function(){
-            callback(null, 'one');
-        }, 200);
-    },
-    function(callback){
-        setTimeout(function(){
-            callback(null, 'two');
-        }, 100);
-    }
-],
-// optional callback
-function(err, results){
-    // the results array will equal ['one','two'] even though
-    // the second function had a shorter timeout.
-});
 
-
-// an example using an object instead of an array
-async.parallel({
-    one: function(callback){
-        setTimeout(function(){
-            callback(null, 1);
-        }, 200);
-    },
-    two: function(callback){
-        setTimeout(function(){
-            callback(null, 2);
-        }, 100);
-    }
-},
-function(err, results) {
-    // results is now equals to: {one: 1, two: 2}
-});
- */
 var connectionHandler = function (connection) {
 
 	var client = new Ed2kClient(connection.remoteAddress, connection.remotePort),
-		stream = new Ed2kTcpStream();
+		stream = new Ed2kTcpStream(),
+		response = new Ed2kMessage();
 
 	log.debug('TcpServer: new connection: ' + client);
 
@@ -82,7 +59,8 @@ var connectionHandler = function (connection) {
 		stream.append(client, data);
 
 		// async.reduce(array, initialValue, function(initialValue, arrayItem, callback(err, result)))
-		async.reduce(stream.parse(), new Ed2kMessage(), function(response, message, callback){
+		async.reduce(stream.parse(), response, function(response, message, callback){
+			// Pre-process message (unzip if needed)
 			Ed2kTcpOperations.preProcessMessage(message, function (message) {
 				Ed2kTcpOperations.dispatch(client, message, function(result) {
 					if (result) {
@@ -91,12 +69,14 @@ var connectionHandler = function (connection) {
 					callback(null, response); // err, result
 				});
 			});
-		}, function(err, response){
+		}, function(err, response) {
+			if (response && response.tell() > 0) {
+				connection.write(response.getBuffer());
+				// log.trace('Ed2kTcpServer.connectionHandler response to ' + client.toString() + '\n' + hexDump(response.getBuffer()));
+				response.reset();
+			}
 			if (client.status == CS.CONNECTION_CLOSE) {
 				connection.end();
-			} else {
-				connection.write(response.getBuffer());
-				log.trace('Ed2kTcpServer.connectionHandler response to ' + client.toString() + '\n' + hexDump(response.getBuffer()));
 			}
 		});
 	});
@@ -119,26 +99,10 @@ var connectionHandler = function (connection) {
 
 exports.Ed2kTcpServer = Ed2kTcpServer;
 
-var server = new Ed2kTcpServer(1234);
-
-server.start(1234);
-
-;(function init() {
-	config.hash = crypt.md5(config.address + config.tcp.port);
-	config.tcp.flags =
-		FLAG.ZLIB +
-		FLAG.NEW_TAGS +
-		FLAG.UNICODE +
-		FLAG.LARGE_FILES +
-		(config.auxiliarPort ? FLAG.AUX_PORT : 0) +
-		(config.requireCrypt ? FLAG.REQUIRE_CRYPT : 0) +
-		(config.requestCrypt ? FLAG.REQUEST_CRYPT : 0) +
-		(config.supportCrypt ? FLAG.SUPPORT_CRYPT : 0) +
-		(config.IpInLogin ? FLAG.IP_IN_LOGIN : 0);
-	log.info('eNode ' + config.versionString);
-	log.info('Server hash: ' + config.hash.toString('hex'));
-	log.info('TCP flags: 0x' + config.tcp.flags.toString(16) + ' - ' + config.tcp.flags.toString(2));
-})();
+Storage.connect(function() {
+	var server = new Ed2kTcpServer(config.tcp.port);
+	server.start();
+});
 
 
 /*

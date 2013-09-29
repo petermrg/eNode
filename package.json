@@ -1,0 +1,34 @@
+{
+  "name": "eNode",
+  "version": "0.2.0",
+  "description": "eD2k/eMule Server",
+  "main": "enode.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "dependencies": {
+    "async": "~0.2.9",
+    "hexy": "~0.2.5",
+    "mongodb": "~1.3.19",
+    "tinylogger": "~0.1.31"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/petermrg/eNode.git"
+  },
+  "keywords": [
+    "ed2k",
+    "emule",
+    "server"
+  ],
+  "author": "P.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/petermrg/eNode/issues"
+  }
+}

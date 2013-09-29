@@ -1,4 +1,4 @@
-exports.config = {
+module.exports = {
 
 	name: 'eNode Server (TESTING)',
 	description: 'eNode: experimental ed2k server written in node.js',
@@ -21,8 +21,8 @@ exports.config = {
 	IpInLogin: false, // ??
 
 	tcp: {
-		port: 5555,
-		portObfuscated: 5565,
+		port: 50001,
+		portObfuscated: 60000,
 		maxConnections: 1000000,
 		// time to wait before giving LowId (ms)
 		connectionTimeout: 2000,
@@ -33,8 +33,8 @@ exports.config = {
 
 	udp: {
 		// tcp+4
-		port: 5559,
-		portObfuscated: 5569,
+		port: 50004,
+		portObfuscated: 60004,
 		getSources: true,
 		getFiles: true,
 		serverKey: 0x12345678,
@@ -42,22 +42,12 @@ exports.config = {
 
 	storage: {
 		engine: 'mongodb',
-
-		mysql: {
-			database: 'enode',
-			host: 'localhost',
-			user: 'enode',
-			pass: 'password',
-			log: false,
-			fullLog: false,
-			connections: 8, // number of concurrent connections to MySQL server
-			deadlockDelay: 100, // time to wait (ms) before retry deadlocked query
-		},
+		returnSourcesLimit: 256, // max 256
 
 		mongodb: {
 			database: 'enode',
 			host: 'localhost',
-			port: '27017',
+			port: 27017,
 			log: true,
 		}
 	},

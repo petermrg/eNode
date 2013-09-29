@@ -1,70 +1,12 @@
+require('./ed2k-globals.js');
+
 var util = require('util'),
-	DynamicBuffer = require('./dynamic-buffer.js').DynamicBuffer,
+	DynamicBuffer = require('./dynamic-buffer.js'),
 	hexDump = require('hexy').hexy,
 	log = require('tinylogger');
 
 var noAssert = false;
 
-// Protocol codes
-global.PR = {
-	ED2K: 	0xe3,
-	EMULE: 	0xc5,
-	ZLIB: 	0xd4,
-}
-
-// Tag types
-global.TYPE = {
-	HASH: 	0x01,
-	STRING: 0x02,
-	UINT32: 0x03,
-	FLOAT: 	0x04,
-	//BOOL: 0x05,
-	//BOOLARR: 0x06,
-	//BLOB: 0x07,
-	UINT16: 0x08,
-	UINT8: 	0x09,
-	//BSOB: 0x0a,
-	TAGS: 	0x0f,
-}
-
-// Tag codes
-global.TAG = {
-	NAME: 				0x01,
-	SIZE: 				0x02,
-	TYPE: 				0x03,
-	FORMAT: 			0x04,
-	VERSION: 			0x11,
-	FLAGS: 				0x20,
-	SIZE_HI: 			0x3a,
-	DESCRIPTION: 		0x0b,
-	SEARCH_TREE: 		0x0e,
-	PORT: 				0x0f,
-	SOURCES: 			0x15,
-	COMPLETE_SOURCES: 	0x30,
-	DYN_IP: 			0x85,
-	VERSION_2: 			0x91, // used in UDP OP_SERVERDESCRES
-	AUXPORTSLIST: 		0x93,
-	MEDIA_ARTIST: 		0xd0,
-	MEDIA_ALBUM: 		0xd1,
-	MEDIA_TITLE: 		0xd2,
-	MEDIA_LENGTH: 		0xd3,
-	MEDIA_BITRATE: 		0xd4,
-	MEDIA_CODEC: 		0xd5,
-	MULE_VERSION: 		0xfb,
-	RATING: 			0xf7,
-	EMULE_UDP_PORTS: 	0xf9,
-	EMULE_OPTIONS_1: 	0xfa,
-	EMULE_OPTIONS_2: 	0xfe,
-};
-
-var TAG_INVERSE = {};
-
-global.FILE = {
-	PARTIAL_ID: 	0xfcfcfcfc,
-	PARTIAL_PORT: 	0x0000fcfc,
-	COMPLETE_ID: 	0xfbfbfbfb,
-	COMPLETE_PORT: 	0x0000fbfb,
-};
 
 
 /**
@@ -103,12 +45,12 @@ Ed2kMessage.prototype.readOpcode = function() {
  * @return {Ed2kMessage} Shifted message
  */
 Ed2kMessage.prototype.shift = function(length) {
-	log.trace('Ed2kMessage.shift');
-	var message = new Ed2kMessage(length),
-		unzipped;
+	//log.trace('Ed2kMessage.shift');
+	var message = new Ed2kMessage(length);
 	this._buffer.copy(message._buffer, 0, 0, length);
 	this._buffer.copy(this._buffer, 0, length);
 	this._position-= length;
+	message.seek(length);
 	return message;
 }
 
@@ -124,7 +66,7 @@ Ed2kMessage.prototype.readTag = function() {
 		length = 0;
 
 	if (type & 0x80) {
-		// Lugdunum extended tag - type highest bit is set
+		// Lugdunum extended tag - highest bit of 'type' is set
 		code = this.readUInt8();
 		type = (type & 0x7f);
 		if (type >= 0x10) {
@@ -354,12 +296,4 @@ Ed2kMessage.serialize = function(data) {
 	return message;
 }
 
-;(function() {
-	for (var name in TAG) {
-		TAG_INVERSE[TAG[name]] = name;
-	}
-})();
-
-exports.Ed2kMessage = Ed2kMessage;
-exports.PROTOCOLS = PR;
-exports.TYPE = TYPE;
+module.exports = Ed2kMessage;

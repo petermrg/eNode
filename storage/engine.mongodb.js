@@ -1,7 +1,7 @@
 var mongo = require('mongodb')
 var log = require('tinylogger')
 var misc = require('../ed2k/misc.js')
-var conf = require('../enode.config.js').config.storage.mongodb
+var conf = require('../enode.config.js').storage.mongodb
 
 /**
  * MongoDB Storage engine

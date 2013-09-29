@@ -1,25 +1,31 @@
-global.CS = {
-	NOT_LOGGED: 0,
-	CONNECTION_CLOSE: 1,
-}
+require('./ed2k-globals.js');
+
+var util = require('util'),
+	helpers = require('./helpers.js');
 
 /**
  * Client info
  *
- * @param {string} address Client address
+ * @param {string} IPv4 address Client address. In string (a.b.c.d) or Int23LE.
  * @param {string} port Client port
  */
-var Ed2kClient = function(address, port) {
-	this.id = 1;
+var Ed2kClient = function(id, port) {
+	this.id = id || null; // int32
+	this.hash = null; // Buffer(16);
 	this.status = CS.NOT_LOGGED;
-	this.address = address;
-	this.port = port;
+	this.connected = false;
+	this.port = port || null; // int16
+	this.name = null; // string
+	this.version = null;
+	this.muleVersion = null;
+	this.flags = null;
+	this.time = new Date(); // connection time
+	this.connected = false;
 }
 
 Ed2kClient.prototype.toString = function() {
-	return [this.address,':',this.port].join('');
+	return [helpers.Int32LEtoIp4(this.id), ':', this.port].join('');
 }
 
-exports.Ed2kClient = Ed2kClient;
-exports.CLIENT_STATUS = CS;
+module.exports = Ed2kClient;
 

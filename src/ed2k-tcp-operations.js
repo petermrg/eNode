@@ -1,46 +1,27 @@
-var	Ed2kMessage = require('./ed2k-message.js').Ed2kMessage,
+require('./ed2k-globals.js');
+
+var	Ed2kMessage = require('./ed2k-message.js'),
 	log = require('tinylogger'),
 	hexDump = require('hexy').hexy,
-	config = require('../enode.config.js').config,
+	config = require('../enode.config.js'),
 	zlib = require('zlib'),
-	helpers = require('./helpers.js');
+	helpers = require('./helpers.js'),
+	Storage = require('./storage-' + config.storage.engine + '.js'),
+	Ed2kFile = require('./ed2k-file.js');
 
-
-var OP = {
-	LOGIN_REQUEST: 		0x01, // aka HELLO
-	// HELLO_ANSWER: 		0x4c,
-	REJECT:				0x05,
-	// GET_SERVER_LIST: 	0x14,
-	OFFER_FILES: 		0x15,
-	// SEARCH_REQUEST: 	0x16,
-	// GET_SOURCES: 		0x19,
-	// CALLBACK_REQUEST: 	0x1c,
-	// GET_SOURCES_OBFU: 	0x23,
-	// SERVER_LIST: 		0x32,
-	// SEARCH_RESULT: 		0x33,
-	SERVER_STATUS: 		0x34,
-	// CALLBACK_REQUESTED: 0x35,
-	// CALLBACK_FAILED: 	0x36,
-	SERVER_MESSAGE: 	0x38,
-	ID_CHANGE: 			0x40,
-	SERVER_IDENT: 		0x41,
-	// FOUND_SOURCES: 		0x42,
-	// FOUND_SOURCES_OBFU: 0x44
-}
-
-var operations = [];
-var responses = [];
+var operations = [],
+	responses = [];
 
 /**
  * Dispatch message
  *
- * @param {Ed2kClient}  client
+ * @param {Ed2kClient}	client
  * @param {Ed2kMessage} message
- * @param {Function}    callback(Ed2kMessage)
+ * @param {Function}	callback(Ed2kMessage)
  */
 var dispatch = function(client, message, callback) {
 	var opcode = message.readOpcode(); // also seeks message position to 5
-	log.debug('Ed2kTcpOperations.dispatch: 0x' + opcode + ' ' + client.toString());
+	// log.debug('Ed2kTcpOperations.dispatch: 0x' + opcode + ' ' + client.toString());
 	operations[opcode](client, message, function(response) {
 		if (message.getSizeLeft() > 0) {
 			log.error('loginRequest: remaining data in message');
@@ -60,11 +41,11 @@ var preProcessMessage = function(message, callback) {
 	// check for compressed message
 	if (message.readUInt8() == PR.ZLIB) {
 		zlib.unzip(message._buffer.slice(6), function (err, data) {
-			log.trace('Ed2kTcpOperations.preProcess: unzipping message');
+			// log.trace('Ed2kTcpOperations.preProcess: unzipping message');
 			if (err) {
 				log.error('Ed2kTcpOperations.preProcess: Error unzipping message');
 			} else {
-				log.trace('Ed2kTcpOperations.preProcess: unzip ok! (' + data.length + ' bytes)\n' + hexDump(data.slice(0, 64)));
+				// log.trace('Ed2kTcpOperations.preProcess: unzip ok! (' + data.length + ' bytes)\n' + hexDump(data.slice(0, 64)));
 				unzipped = new Buffer(data.length + 6);
 				message._buffer.copy(unzipped, 0, 0, 6);
 				data.copy(unzipped, 6, 0, data.length);
@@ -82,140 +63,39 @@ var preProcessMessage = function(message, callback) {
 /**
  * Login request
  *
- * @param {Ed2kClient} client
+ * @param {Ed2kClient}  client
  * @param {Ed2kMessage} message
- * @param {Function} callback(Ed2kMessage)
+ * @param {Function}    callback(Ed2kMessage)
  */
 operations[OP.LOGIN_REQUEST] = function (client, message, callback) {
-	log.trace('Ed2kTcpOperations.operations[LOGIN_REQUEST]');
-	var response = new Ed2kMessage(),
-		request;
+	log.trace('LOGIN_REQUEST');
+
+	client.hash = message.readHash();
+	client.id = message.readUInt32LE();
+	client.port = message.readUInt16LE();
+	message.readTags(function(tag) {
+		client[tag[0]] = tag[1];
+	});
 
 	if (client.status == CS.NOT_LOGGED) {
-		request = {
-			hash: message.readHash(),
-			id: message.readUInt32LE(),
-			port: message.readUInt16LE(),
-			tags: message.readTags()
-		}
-		log.trace('+ Login request: ' + JSON.stringify(request));
-		response.writeMessage(responses[OP.SERVER_MESSAGE]('server version ' + config.versionString + ' (eNode)'));
-		response.writeMessage(responses[OP.SERVER_MESSAGE](config.messageLogin));
-		response.writeMessage(responses[OP.SERVER_STATUS]());
-		response.writeMessage(responses[OP.ID_CHANGE](client));
-		response.writeMessage(responses[OP.SERVER_IDENT]());
-	} else {
-		response = responses[OP.REJECT]();
-		client.status = CS.CONNECTION_CLOSE;
-	}
-	callback(response);
-}
-
-/**
- * Offer files
- *
- * @param {Ed2kClient} client
- * @param {Ed2kMessage} message
- * @param {Function} callback(null)
- */
-operations[OP.OFFER_FILES] = function (client, message, callback) {
-	var count = message.readUInt32LE(),
-		file, id, port;
-
-	log.trace('Ed2kTcpOperations.operations[OFFER_FILES]: Got ' + count + ' files.');
-
-	while (count--) {
-		file = {
-			hash: message.readHash(),
-			complete: true,
-		}
-		id = message.readUInt32LE();
-		port = message.readUInt16LE();
-		file.complete = (id == FILE.COMPLETE_ID && port == FILE.COMPLETE_PORT) ? true : false;
-		message.readTags(function (tag) {
-			file[tag[0]] = tag[1];
+		Storage.clients.isConnected(client, function (err, connected) {
+			var response = new Ed2kMessage();
+			if (!connected) {
+				log.trace('+ Login request: ' + JSON.stringify(client));
+				response.writeMessage(responses[OP.SERVER_MESSAGE]('server version ' + config.versionString + ' (eNode)'));
+				response.writeMessage(responses[OP.SERVER_MESSAGE](config.messageLogin));
+				response.writeMessage(responses[OP.SERVER_STATUS]());
+				response.writeMessage(responses[OP.ID_CHANGE](client));
+				response.writeMessage(responses[OP.SERVER_IDENT]());
+				callback(response);
+			} else {
+				client.status = CS.CONNECTION_CLOSE;
+				callback(responses[OP.SERVER_MESSAGE]('A client with the same hash is already connected. Closing connection.'));
+			}
 		});
-		file.SIZE_LO = file.SIZE;
-		if (file.SIZE_HI) {
-			file.SIZE+= file.SIZE_HI * 0x100000000;
-		} else file.SIZE_HI = 0;
-		//log.trace(JSON.stringify(file));
-		//log.trace(JSON.stringify(file.NAME.substr(0, 50)));
+	} else {
+		callback(responses[OP.SERVER_MESSAGE]('You are already connected.'));
 	}
-	callback(null);
-}
-
-/**
- * Reject Message
- *
- * @return {Ed2kMessage}
- */
-responses[OP.REJECT] = function () {
-	log.trace('Ed2kTcpOperations.responses[OP.REJECT]')
-	return Ed2kMessage.serialize([
-		[TYPE.UINT8, OP.REJECT],
-	]);
-}
-
-/**
- * Server Message
- *
- * @param	{String} text Server message
- * @return {Ed2kMessage}
- */
-responses[OP.SERVER_MESSAGE] = function (text) {
-	log.trace('Ed2kTcpOperations.responses[OP.SERVER_MESSAGE]')
-	return Ed2kMessage.serialize([
-		[TYPE.UINT8, OP.SERVER_MESSAGE],
-		[TYPE.STRING, text],
-	]);
-}
-
-/**
- * Server Status
- *
- * @return {Ed2kMessage}
- */
-responses[OP.SERVER_STATUS] = function () {
-	log.trace('Ed2kTcpOperations.responses[OP.SERVER_STATUS]')
-	return Ed2kMessage.serialize([
-		[TYPE.UINT8, OP.SERVER_STATUS],
-		[TYPE.UINT32, 1111], // clients count
-		[TYPE.UINT32, 2222] // files count
-	]);
-}
-
-/**
- * ID Change
- *
- * @return {Ed2kMessage}
- */
-responses[OP.ID_CHANGE] = function (client) {
-	log.trace('Ed2kTcpOperations.responses[OP.ID_CHANGE]')
-	return Ed2kMessage.serialize([
-		[TYPE.UINT8, OP.ID_CHANGE],
-		[TYPE.UINT32, client.id],
-		[TYPE.UINT32, config.tcp.flags]
-	]);
-}
-
-/**
- * Server Ident
- *
- * @return {Ed2kMessage}
- */
-responses[OP.SERVER_IDENT] = function () {
-	log.trace('Ed2kTcpOperations.responses[OP.SERVER_IDENT]')
-	return Ed2kMessage.serialize([
-		[TYPE.UINT8, OP.SERVER_IDENT],
-		[TYPE.HASH, config.hash],
-		[TYPE.UINT32, helpers.Ip4toInt32LE(config.address)],
-		[TYPE.UINT16, config.tcp.port],
-		[TYPE.TAGS, [
-			[TYPE.STRING, TAG.NAME, config.name],
-			[TYPE.STRING, TAG.DESCRIPTION, config.description]
-		]],
-	]);
 }
 
 /*
@@ -276,6 +156,203 @@ loginRequest: function(client) {
 	})
 },
 */
+/**
+ * Offer files
+ *
+ * @param {Ed2kClient}  client
+ * @param {Ed2kMessage} message
+ */
+operations[OP.OFFER_FILES] = function (client, message) {
+	var count = message.readUInt32LE(),
+		file, id, port;
+	log.trace('OFFER_FILES: Got ' + count + ' files.');
+	while (count--) {
+		file = Ed2kFile.readFromMessage(client, message);
+		Storage.files.addSource(client, file, null);
+	}
+}
+
+/**
+ * Get Server List
+ *
+ * @param {Ed2kClient}  client
+ * @param {Ed2kMessage} message
+ * @param {Function}    callback(err, Ed2kMessage)
+ */
+operations[OP.GET_SERVER_LIST] = function (client, message, callback) {
+	log.trace('GET_SERVER_LIST: not implemented!');
+	callback(null, null);
+}
+
+/**
+ * Get Sources Obfuscated. Supposes that client supports largefiles.
+ *
+ * @param {Ed2kClient}  client
+ * @param {Ed2kMessage} message
+ * @param {Function}    callback(err, Ed2kMessage)
+ */
+operations[OP.GET_SOURCES_OBFU] = function (client, message, callback) {
+	var file = new Ed2kFile();
+
+	file.hash = message.readHash();
+	file.size = message.readUInt32LE();
+
+	// large file? read 64 bits
+	if (file.size == 0) {
+		file.size = message.readUInt32LE();
+		file.sizeHi = message.readUInt32LE();
+	}
+	log.trace('GET_SOURCES_OBFU: ' + file.hash.toString('hex'));
+	Storage.files.getSources(client, file, function(err, files) {
+		if (!err) {
+			if (files.length > 0) {
+				callback(err, responses[OP.FOUND_SOURCES_OBFU](files));
+			} else {
+				callback(err, null);
+			}
+		}
+		else {
+			log.error('GET_SOURCES_OBFU: ' + err);
+		}
+	});
+}
+
+/**
+ * Get Sources. Supposes that client supports largefiles.
+ *
+ * @param {Ed2kClient}  client
+ * @param {Ed2kMessage} message
+ * @param {Function}    callback(err, Ed2kMessage)
+ */
+operations[OP.GET_SOURCES] = function (client, message, callback) {
+	var file = new Ed2kFile();
+
+	file.hash = message.readHash();
+	file.size = message.readUInt32LE();
+
+	// large file? read 64 bits
+	if (file.size == 0) {
+		file.size = message.readUInt32LE();
+		file.sizeHi = message.readUInt32LE();
+	}
+	log.trace('GET_SOURCES: ' + file.hash.toString('hex'));
+	Storage.files.getSources(client, file, function(err, files) {
+		if (!err) {
+			if (files.length > 0) {
+				callback(err, responses[OP.FOUND_SOURCES](files));
+			} else {
+				callback(err, null);
+			}
+		}
+		else {
+			log.error('GET_SOURCES: ' + err);
+		}
+	});
+}
+
+/**
+ * Found sources
+ *
+ * @param  {Array} files { id, port }
+ * @return {Ed2kMessage}
+ */
+responses[OP.FOUND_SOURCES] = function (files) {
+	var data = [
+		[TYPE.UINT8, OP.FOUND_SOURCES],
+		[TYPE.HASH, file.hash],
+		[TYPE.UINT8, files.length],
+	];
+	files.forEach(function (file) {
+		data.push([TYPE.UINT32, file.id]);
+		data.push([TYPE.UINT16, file.port]);
+	});
+	return Ed2kMessage.serialize(data);
+}
+
+/**
+ * Found sources obfuscated
+ *
+ * @param  {Array} files { id, port }
+ * @return {Ed2kMessage}
+ * @todo add client obfuscated data
+ */
+responses[OP.FOUND_SOURCES_OBFU] = function (file) {
+	log.warn('OP.FOUND_SOURCES_OBFU not implemented, returning OP.FOUND_SOURCES');
+	return responses[OP.FOUND_SOURCES](file);
+}
+
+/**
+ * Reject Message
+ *
+ * @return {Ed2kMessage}
+ */
+responses[OP.REJECT] = function () {
+	log.trace('REJECT')
+	return Ed2kMessage.serialize([
+		[TYPE.UINT8, OP.REJECT],
+	]);
+}
+
+/**
+ * Server Message
+ *
+ * @param	{String} text Server message
+ * @return {Ed2kMessage}
+ */
+responses[OP.SERVER_MESSAGE] = function (text) {
+	log.trace('SERVER_MESSAGE')
+	return Ed2kMessage.serialize([
+		[TYPE.UINT8, OP.SERVER_MESSAGE],
+		[TYPE.STRING, text],
+	]);
+}
+
+/**
+ * Server Status
+ *
+ * @return {Ed2kMessage}
+ */
+responses[OP.SERVER_STATUS] = function () {
+	log.trace('SERVER_STATUS')
+	return Ed2kMessage.serialize([
+		[TYPE.UINT8, OP.SERVER_STATUS],
+		[TYPE.UINT32, 1111], // clients count
+		[TYPE.UINT32, 2222] // files count
+	]);
+}
+
+/**
+ * ID Change
+ *
+ * @return {Ed2kMessage}
+ */
+responses[OP.ID_CHANGE] = function (client) {
+	log.trace('ID_CHANGE')
+	return Ed2kMessage.serialize([
+		[TYPE.UINT8, OP.ID_CHANGE],
+		[TYPE.UINT32, client.id],
+		[TYPE.UINT32, config.tcp.flags]
+	]);
+}
+
+/**
+ * Server Ident
+ *
+ * @return {Ed2kMessage}
+ */
+responses[OP.SERVER_IDENT] = function () {
+	log.trace('SERVER_IDENT')
+	return Ed2kMessage.serialize([
+		[TYPE.UINT8, OP.SERVER_IDENT],
+		[TYPE.HASH, config.hash],
+		[TYPE.UINT32, helpers.Ip4toInt32LE(config.address)],
+		[TYPE.UINT16, config.tcp.port],
+		[TYPE.TAGS, [
+			[TYPE.STRING, TAG.name, config.name],
+			[TYPE.STRING, TAG.description, config.description]
+		]],
+	]);
+}
 
 ;(function() {
 	// Assign a fallback function to unhandled operations
@@ -292,4 +369,3 @@ loginRequest: function(client) {
 
 exports.dispatch = dispatch;
 exports.preProcessMessage = preProcessMessage;
-//exports.TCP_OPCODES = OP;

@@ -1,10 +1,7 @@
 var util = require('util'),
-	Ed2kMessage = require('./ed2k-message.js').Ed2kMessage,
-	log = require('tinylogger');
-
-var CS = {
-	NEW: 0
-}
+	Ed2kMessage = require('./ed2k-message.js'),
+	log = require('tinylogger'),
+	hexDump = require('hexy').hexy;
 
 /**
  * TCP data stream
@@ -32,7 +29,7 @@ Ed2kTcpStream.prototype.append = function (client, data) {
  *
  * @return {Array} Array of Ed2kMessages
  */
-Ed2kTcpStream.prototype.parse = function(callback) {
+Ed2kTcpStream.prototype.parse = function() {
 	var result = [],
 		message,
 		protocol,
@@ -47,7 +44,6 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 		protocol = this.readUInt8();
 
 		if (Ed2kMessage.validProtocol(protocol)) {
-
 			dataSize = this.readUInt32LE();
 			messageSize = dataSize + headerSize;
 
@@ -61,21 +57,20 @@ Ed2kTcpStream.prototype.parse = function(callback) {
 				// break while
 				bufferSize = 0;
 			}
-
 		} else {
 			// Bad protocol number. Discard all data
-			// log.warn('Ed2kMessage.parseEd2kPMessage: bad protocol: 0x' + protocol.toString(16));
+			log.error('Ed2kTcpStream.parse: bad protocol: 0x'
+				+ protocol.toString(16) + '\n'
+				+ hexDump(this._buffer.slice(0, 32)));
 			this.reset();
 			bufferSize = 0;
 		}
 	}
-	log.trace('Ed2kTcpStream.parse: got ' + result.length + ' messages.')
+	if (result.length) log.trace('Ed2kTcpStream.parse: got ' + result.length + ' messages.')
 	return result;
 }
 
-exports.Ed2kTcpStream = Ed2kTcpStream;
-exports.CLIENT_STATUS = CS;
-
+module.exports = Ed2kTcpStream;
 
 /*
 message.prototype.init = function(buffer) {

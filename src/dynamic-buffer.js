@@ -338,4 +338,4 @@ DynamicBuffer.prototype.getFileList = function(callback) {
 	return count
 }
 */
-exports.DynamicBuffer = DynamicBuffer;
+module.exports = DynamicBuffer;
