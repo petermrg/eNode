@@ -9,14 +9,14 @@ var conf          = require('./enode.config.js').config;
 
 storage.init(function(){
 
-    ed2kTCPServer.run(false, conf.tcp.port, function(){
-        ed2kUDPServer.run(false, conf.udp.port);
-    });
+  ed2kTCPServer.run(false, conf.tcp.port, function(){
+    ed2kUDPServer.run(false, conf.udp.port);
+  });
 
-    if (conf.supportCrypt) {
-        ed2kTCPServer.run(true, conf.tcp.portObfuscated, function(){
-            ed2kUDPServer.run(true, conf.udp.portObfuscated);
-        });
-    }
+  if (conf.supportCrypt) {
+    ed2kTCPServer.run(true, conf.tcp.portObfuscated, function(){
+      ed2kUDPServer.run(true, conf.udp.portObfuscated);
+    });
+  }
 
 });

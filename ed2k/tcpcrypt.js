@@ -1,12 +1,12 @@
-var conf = require('../enode.config.js').config,
-    log = require('tinylogger'),
-    hexDump = require('hexy').hexy,
-    bigint = require('../lib/biginteger.js'),
-    crypt = require('./crypt.js'),
+var conf = require('../enode.config.js').config
+var log = require('tinylogger')
+var hexDump = require('hexy').hexy
+var crypt = require('./crypt.js')
+var bigint = require('../lib/biginteger.js').BigInteger
 
-    MAGICVALUE_SYNC    = 0x835E6FC4,
-    MAGICVALUE_SERVER  = 203,
-    MAGICVALUE_REQUESTER = 34
+var MAGICVALUE_SYNC      = 0x835E6FC4
+var MAGICVALUE_SERVER    = 203
+var MAGICVALUE_REQUESTER = 34
 
 var TcpCrypt = function(packet) {
   log.trace('TCP Crypt init')
@@ -30,7 +30,7 @@ TcpCrypt.prototype.process = function(buffer) {
     case CS_NEGOTIATING:
       log.trace('TcpCrypt.process: Negotiation response')
       var that = this
-      this.handshake(buffer, function(err, data){
+      this.handshake(buffer, function(err, data) {
         if (err != false) {
           log.error(err)
           that.packet.client.end()
@@ -49,18 +49,18 @@ TcpCrypt.prototype.process = function(buffer) {
 }
 
 TcpCrypt.prototype.negotiate = function() {
-  var g = bignum(2),
-      p = bignum.fromBuffer(CRYPT_PRIME),
-      A = bignum.fromBuffer(this.packet.data.get(CRYPT_PRIME_SIZE)),
-      b = bignum.fromBuffer(crypt.randBuf(CRYPT_DHA_SIZE)),
-      B = bignum.powm(g, b, p).toBuffer(),
-      K = bignum.powm(A, b, p).toBuffer(),
+  var g = bigint(2)
+  var p = bigint.fromBuffer(CRYPT_PRIME)
+  var A = bigint.fromBuffer(this.packet.data.get(CRYPT_PRIME_SIZE))
+  var b = bigint.fromBuffer(crypt.randBuf(CRYPT_DHA_SIZE))
+  var B = bigint.powm(g, b, p).toBuffer()
+  var K = bigint.powm(A, b, p).toBuffer()
 
-      padSize = this.packet.data.getUInt8(),
-      pad = this.packet.data.get(padSize),
+  var padSize = this.packet.data.getUInt8()
+  var pad = this.packet.data.get(padSize)
   // log.debug('Excess (should be 0): '+
   // (this.packet.data.length-this.packet.data.pos()))
-      buf = new Buffer(CRYPT_PRIME_SIZE+1)
+  var buf = new Buffer(CRYPT_PRIME_SIZE+1)
 
   buf.putBuffer(K)
 
@@ -94,9 +94,9 @@ TcpCrypt.prototype.negotiate = function() {
 }
 
 /**
- * Reads the handshake response from client, checks the MAGICVALUE_SYNC constant and
+ * Reads the handshake response from client, checks the MAGICVALUE_SYNC
+ * constant and checks the encryption method selected by client.
  *
- * checks the encryption method selected by client.
  * @param {Buffer} buffer Incoming data
  * @param {Function} callback(err, data)
  * @returns {Boolean} True on correct handshake or False on error.

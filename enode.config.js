@@ -1,61 +1,56 @@
-exports.config = {
+module.exports = {
 
-  name: '(TESTING!!!) eNode',
-  description: 'eNode: experimental ed2k server written in node.js',
-  address: '192.168.1.2',
-  //address: '192.168.1.50',
-  //address: '192.168.1.33',
-  //address: '192.168.43.61',
-  dynIp: '',
+	name: 'eNode Server (TESTING)',
+	description: 'eNode: experimental ed2k server written in node.js',
+	address: '192.168.1.2',
+	dynIp: '',
 
-  messageLowID: 'You have LowID.',
-  messageLogin: 'Welcome to eNode!',
+	versionString: 'v0.04',
+	versionInt: 0x00000003,
 
-  noAssert: false, // Set noAssert to true to skip offset validation in Buffers
+	messageLowID: 'You have LowID.',
+	messageLogin: 'Welcome to eNode!',
 
-  supportCrypt: true,
-  requestCrypt: true,
-  requireCrypt: true,
-  auxiliarPort: false, // ??
-  IPinLogin: false, // ??
+	// Set noAssert to true to skip offset validation in Buffers
+	noAssert: false,
 
-  tcp: {
-    port: 5555,
-    portObfuscated: 5565,
-    maxConnections: 1000000,
-    connectionTimeout: 2000, // time to wait before giving LowId (ms)
-    allowLowIDs: true,
-    minLowID: 1,
-    maxLowID: 0xffffff,
-  },
+	supportCrypt: true,
+	requestCrypt: true,
+	requireCrypt: true,
+	auxiliarPort: false, // ??
+	IpInLogin: false, // ??
 
-  udp: {
-    port: 5559, // tcp+4
-    portObfuscated: 5569,
-    getSources: true,
-    getFiles: true,
-    serverKey: 0x12345678,
-  },
+	tcp: {
+		port: 50001,
+		portObfuscated: 60000,
+		maxConnections: 1000000,
+		// time to wait before giving LowId (ms)
+		connectionTimeout: 2000,
+		allowLowIDs: true,
+		minLowID: 1,
+		maxLowID: 0xffffff,
+	},
 
-  storage: {
-    engine: 'mysql',
+	udp: {
+		// tcp+4
+		port: 50004,
+		portObfuscated: 60004,
+		getSources: true,
+		getFiles: true,
+		serverKey: 0x12345678,
+	},
 
-    mysql: {
-      database: 'enode',
-      host: 'localhost',
-      user: 'enode',
-      pass: 'password',
-      log: false,
-      fullLog: false,
-      connections: 8, // number of concurrent connections to MySQL server
-      deadlockDelay: 100, // time to wait (ms) before retry deadlocked query
-    },
+	storage: {
+		engine: 'mongodb',
+		returnSourcesLimit: 256, // max 256
 
-    mongodb: {
-      host: '127.0.0.1',
-      port: '27017',
-    }
-  },
+		mongodb: {
+			database: 'enode',
+			host: 'localhost',
+			port: 27017,
+			log: true,
+		}
+	},
 
 };
 
